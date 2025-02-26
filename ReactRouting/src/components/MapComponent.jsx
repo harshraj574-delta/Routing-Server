@@ -6,20 +6,30 @@ import './MapComponent.css';
 // Create custom icons
 const maleEmployeeIcon = L.divIcon({
   className: 'employee-icon male',
-  iconSize: [16, 16],
-  iconAnchor: [8, 8]
+  iconSize: [12, 12],
+  iconAnchor: [6, 6]
 });
 
 const femaleEmployeeIcon = L.divIcon({
   className: 'employee-icon female',
-  iconSize: [16, 16],
-  iconAnchor: [8, 8]
+  iconSize: [12, 12],
+  iconAnchor: [6, 6]
 });
+
+const createEmployeeIcon = (gender = 'unknown', order) => {
+  const genderClass = gender && typeof gender === 'string' ? gender.toLowerCase() : 'unknown';
+  return L.divIcon({
+    className: `employee-icon ${genderClass}`,
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
+    html: `<div class="employee-marker">${order}</div>`
+  });
+};
 
 const facilityIcon = L.divIcon({
   className: 'facility-icon',
-  iconSize: [20, 20],
-  iconAnchor: [10, 10]
+  iconSize: [16, 16],
+  iconAnchor: [8, 8]
 });
 
 function MapComponent({ route, facility }) {
@@ -65,7 +75,7 @@ function MapComponent({ route, facility }) {
           // Add employee markers
           route.employees.forEach((emp, index) => {
             const coords = employeeCoordinates[index];
-            const icon = emp.gender === 'female' ? femaleEmployeeIcon : maleEmployeeIcon;
+            const icon = createEmployeeIcon(emp.gender, index + 1);
             const marker = L.marker(coords, { icon })
               .addTo(map)
               .bindPopup(`<div class="popup-content">
@@ -73,6 +83,7 @@ function MapComponent({ route, facility }) {
                 <p><strong>ID:</strong> ${emp.id}</p>
                 <p><strong>Gender:</strong> ${emp.gender}</p>
                 <p><strong>Pick-up Time:</strong> ${emp.pickupTime || 'N/A'}</p>
+                <p><strong>Pick-up Order:</strong> ${index + 1}</p>
               </div>`);
             setMarkers(prevMarkers => [...prevMarkers, marker]);
           });

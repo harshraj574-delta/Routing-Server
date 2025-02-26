@@ -2,8 +2,8 @@
   border-radius: 50%;
   border: 1px solid white;
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-  width: 16px !important;
-  height: 16px !important;
+  width: 12px !important;
+  height: 12px !important;
 }
 
 .employee-icon.male {
@@ -19,72 +19,38 @@
   border-radius: 50%;
   border: 2px solid white;
   box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-  width: 20px !important;
-  height: 20px !important;
+  width: 16px !important;
+  height: 16px !important;
 }
 
-/* Updated popup styles */
-.popup-content {
-  padding: 8px;
-  min-width: 160px;
-  font-size: 12px;
-}
-
-.popup-content h3 {
-  margin: 0 0 6px 0;
-  color: #1a1a1a;
-  font-size: 13px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 4px;
-}
-
-.popup-content p {
-  margin: 3px 0;
-  font-size: 11px;
-  color: #666;
+.employee-marker {
   display: flex;
-  justify-content: space-between;
-}
-
-.popup-content strong {
-  color: #333;
-  font-weight: 600;
-  margin-right: 4px;
-}
-
-/* Style the Leaflet popup */
-.leaflet-popup-content-wrapper {
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  padding: 0;
-}
-
-.leaflet-popup-content {
-  margin: 0;
-  line-height: 1.3;
-}
-
-.leaflet-popup-tip-container {
-  margin-top: -1px;
-}
-
-.leaflet-popup {
-  margin-bottom: 15px;
-}
-
-/* Compact info layout */
-.employee-info-grid {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 2px 8px;
   align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background: white;
+  border-radius: 50%;
+  border: 1px solid #2196F3;
+  color: #2196F3;
+  font-weight: bold;
+  font-size: 10px;
 }
 
-.info-label {
-  color: #666;
-  font-weight: 500;
+.employee-icon.male .employee-marker {
+  border-color: #2196F3;
+  color: #2196F3;
 }
 
+.employee-icon.female .employee-marker {
+  border-color: #E91E63;
+  color: #E91E63;
+}
+
+.employee-marker:hover {
+  transform: scale(1.1);
+  transition: transform 0.2s ease;
+}
 .info-value {
   color: #333;
-} 
+}

@@ -120,10 +120,37 @@ const ProfileModal = ({ onClose, onSave, zones }) => {
     }));
   };
 
+  const calculateDirectionVector = (point1, point2) => {
+    return [
+      point2[0] - point1[0],
+      point2[1] - point1[1]
+    ];
+  };
+
+  const calculateDirectionSimilarity = (dir1, dir2) => {
+    const mag1 = Math.sqrt(dir1[0] * dir1[0] + dir1[1] * dir1[1]);
+    const mag2 = Math.sqrt(dir2[0] * dir2[0] + dir2[1] * dir2[1]);
+    const dotProduct = dir1[0] * dir2[0] + dir1[1] * dir2[1];
+
+    if (mag1 === 0 || mag2 === 0) return 0;
+    return (dotProduct / (mag1 * mag2) + 1) / 2; // Normalized to 0-1
+  };
+
+  const estimateRouteDuration = (zone1Center, zone2Center) => {
+    // Assuming average speed of 40 km/h and converting coordinates to approximate kilometers
+    const distanceKm = calculateDistance(zone1Center, zone2Center) * 111; // Rough conversion to km
+    const averageSpeed = 40; // km/h
+    return (distanceKm / averageSpeed) * 60; // Convert to minutes
+  };
+
   const autoClubZones = async () => {
     try {
       setZonePairs([]);
       
+      const maxRouteDuration = 120; // Maximum route duration in minutes
+      const maxCapacity = 2; // Maximum zones that can be clubbed together
+      
+      // Get all zones and their centers
       const zoneData = Object.keys(zones).map(zoneName => {
         const center = calculateZoneCenter(zoneName);
         return {
@@ -133,40 +160,75 @@ const ProfileModal = ({ onClose, onSave, zones }) => {
         };
       });
 
+      // Sort zones by distance from facility (farthest first)
       zoneData.sort((a, b) => b.distanceToFacility - a.distanceToFacility);
 
       const newPairs = [];
       const processedZones = new Set();
+      let remainingZones = [...zoneData];
 
-      for (let i = 0; i < zoneData.length; i++) {
-        const zone1 = zoneData[i];
-        if (processedZones.has(zone1.zoneName)) continue;
+      while (remainingZones.length > 0) {
+        let currentRoute = [];
+        let currentZones = [...remainingZones];
 
-        let bestMatch = null;
-        let bestScore = -1;
+        // Start with the farthest zone from facility
+        let currentZone = currentZones[0];
+        currentRoute.push(currentZone);
+        remainingZones = remainingZones.filter(z => z !== currentZone);
+        currentZones = currentZones.filter(z => z !== currentZone);
 
-        for (let j = 0; j < zoneData.length; j++) {
-          const zone2 = zoneData[j];
-          if (zone2.zoneName === zone1.zoneName || processedZones.has(zone2.zoneName)) continue;
+        while (currentRoute.length < maxCapacity && currentZones.length > 0) {
+          const lastZone = currentRoute[currentRoute.length - 1];
+          const directionToFacility = calculateDirectionVector(lastZone.center, facility);
 
-          const distance = calculateDistance(zone1.center, zone2.center);
-          const directionScore = calculateDirectionScore(zone1.center, zone2.center, facility);
-          const score = (1 / (distance + 0.001)) * directionScore;
+          // Score remaining zones based on proximity and direction
+          const scoredZones = currentZones.map(zone => {
+            const distance = calculateDistance(lastZone.center, zone.center);
+            const direction = calculateDirectionVector(lastZone.center, zone.center);
+            const directionScore = calculateDirectionSimilarity(direction, directionToFacility);
+            
+            // Calculate route duration for the potential combination
+            const routeDuration = estimateRouteDuration(lastZone.center, zone.center);
+            const durationScore = routeDuration <= maxRouteDuration ? (1 - routeDuration / maxRouteDuration) : -1;
 
-          if (score > bestScore) {
-            bestScore = score;
-            bestMatch = zone2;
+            // Comprehensive scoring
+            const proximityScore = 1 / (distance + 0.001);
+            const score = (
+              directionScore * 0.4 + // 40% weight to direction alignment
+              proximityScore * 0.3 + // 30% weight to proximity
+              durationScore * 0.3    // 30% weight to duration feasibility
+            );
+
+            return { zone, score };
+          });
+
+          // Sort zones by score (best matches first)
+          scoredZones.sort((a, b) => b.score - a.score);
+
+          // Select the best matching zone if it meets duration criteria
+          const bestMatch = scoredZones[0];
+          if (bestMatch && bestMatch.score > 0) {
+            const routeDuration = estimateRouteDuration(lastZone.center, bestMatch.zone.center);
+            if (routeDuration <= maxRouteDuration) {
+              currentRoute.push(bestMatch.zone);
+              remainingZones = remainingZones.filter(z => z !== bestMatch.zone);
+              currentZones = currentZones.filter(z => z !== bestMatch.zone);
+            } else {
+              break; // Stop adding zones to this route if duration limit exceeded
+            }
+          } else {
+            break; // No suitable matches found
           }
         }
 
-        if (bestMatch && bestScore > 0) {
-          newPairs.push({
-            zone1: zone1.zoneName,
-            zone2: bestMatch.zoneName
-          });
-
-          processedZones.add(zone1.zoneName);
-          processedZones.add(bestMatch.zoneName);
+        // Create pairs from the current route
+        if (currentRoute.length > 1) {
+          for (let i = 0; i < currentRoute.length - 1; i++) {
+            newPairs.push({
+              zone1: currentRoute[i].zoneName,
+              zone2: currentRoute[i + 1].zoneName
+            });
+          }
         }
       }
 

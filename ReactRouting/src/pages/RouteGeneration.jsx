@@ -49,123 +49,141 @@ function RouteGeneration() {
     };
     setSelectedProfile(completeProfile);
   };
-
   const handleGenerateRoutes = async () => {
     if (!selectedProfile) {
       setError('Please select a profile first');
       return;
     }
-
+  
     if (employeeData.length === 0) {
       setError('No employee data available');
       return;
     }
-
+  
     setIsLoading(true);
     setError(null);
-
+    
     try {
-      // Structure the route data as expected by the backend
-      // Group employees by zone
+      // Process data in smaller batches to prevent UI freezing
+      const BATCH_SIZE = 50;
       const employeesByZone = {};
-      zones.forEach(zone => {
+  
+      // Group employees by zone in batches
+      for (let i = 0; i < zones.length; i++) {
+        const zone = zones[i];
         const zoneName = zone.properties?.Name || 'Unknown Zone';
-        employeesByZone[zoneName] = employeeData
+        const zoneEmployees = employeeData
           .filter(emp => emp.zone === zoneName)
           .map(emp => ({
             id: emp.id,
             name: emp.name,
             zone: emp.zone,
             address: emp.address || 'No address provided',
-            location: emp.location // Include location coordinates
+            location: emp.location
           }));
-      });
-
-      // Initialize route data with profile settings
+  
+        if (zoneEmployees.length > 0) {
+          employeesByZone[zoneName] = zoneEmployees;
+          // Allow UI to update every few zones
+          if (i % 10 === 0) await new Promise(resolve => setTimeout(resolve, 0));
+        }
+      }
+  
       const routeData = {
-        profileId: selectedProfile._id, // Use MongoDB _id format
+        profileId: selectedProfile._id,
         date: new Date().toISOString().split('T')[0],
         shift: selectedProfile.shiftTime || 'morning',
         routeData: []
       };
-
-      // Process zones based on profile settings
+  
       const processedZones = new Set();
       const { zonePairingMatrix = {}, highCapacityZones = [] } = selectedProfile;
-
-      // First, handle clubbed zones if zone clubbing is enabled
+      const facility = [28.402910, 76.998015];
+  
+      // Cache distance calculations
+      const distanceCache = new Map();
+      const calculateDistance = (point1, point2) => {
+        const key = `${point1[0]},${point1[1]}-${point2[0]},${point2[1]}`;
+        if (!distanceCache.has(key)) {
+          distanceCache.set(key, Math.sqrt(
+            Math.pow(point2[0] - point1[0], 2) +
+            Math.pow(point2[1] - point1[1], 2)
+          ));
+        }
+        return distanceCache.get(key);
+      };
+  
+      // Process zones in batches
       if (selectedProfile.zoneClubbing) {
-        Object.entries(zonePairingMatrix).forEach(([zone1, pairedZones]) => {
-          if (processedZones.has(zone1)) return;
-
-          pairedZones.forEach(zone2 => {
-            if (processedZones.has(zone2)) return;
-
-            // Combine employees from paired zones
+        const zonePairs = Object.entries(zonePairingMatrix);
+        for (let i = 0; i < zonePairs.length; i++) {
+          const [zone1, pairedZones] = zonePairs[i];
+          if (processedZones.has(zone1)) continue;
+  
+          for (const zone2 of pairedZones) {
+            if (processedZones.has(zone2)) continue;
+  
             const combinedEmployees = [
               ...(employeesByZone[zone1] || []),
               ...(employeesByZone[zone2] || [])
             ];
-
-            if (combinedEmployees.length === 0) return;
-
-            // Determine vehicle capacity based on zone settings
-            const maxCapacity = highCapacityZones.includes(zone1) || highCapacityZones.includes(zone2) ? 12 : 6;
-
-            // Split combined employees into appropriate sized groups
-            for (let i = 0; i < combinedEmployees.length; i += maxCapacity) {
-              const routeEmployees = combinedEmployees.slice(i, i + maxCapacity);
-              const routeNumber = Math.floor(i / maxCapacity) + 1;
-              const timestamp = Date.now();
-              
-              routeData.routeData.push({
+  
+            if (combinedEmployees.length === 0) continue;
+  
+            const maxCapacity = highCapacityZones.includes(zone1) || 
+                               highCapacityZones.includes(zone2) ? 12 : 6;
+  
+            // Process employees in batches
+            for (let j = 0; j < combinedEmployees.length; j += BATCH_SIZE) {
+              const batch = combinedEmployees.slice(j, j + BATCH_SIZE);
+              const routes = await processEmployeeBatch(batch, maxCapacity, facility, calculateDistance);
+              routeData.routeData.push(...routes.map(route => ({
+                ...route,
                 zone: `${zone1}-${zone2}`,
-                employees: routeEmployees,
-                routeNumber: routeNumber,
-                isClubbed: true,
-                vehicleCapacity: maxCapacity,
-                uniqueKey: `${zone1}_${zone2}_${routeNumber}_${timestamp}`
-              });
+                isClubbed: true
+              })));
+  
+              // Allow UI to update between batches
+              await new Promise(resolve => setTimeout(resolve, 0));
             }
-
+  
             processedZones.add(zone1);
             processedZones.add(zone2);
-          });
-        });
-      }
-
-      // Handle remaining zones
-      Object.entries(employeesByZone).forEach(([zoneName, zoneEmployees]) => {
-        if (processedZones.has(zoneName) || zoneEmployees.length === 0) return;
-
-        // Determine vehicle capacity based on zone settings
-        const maxCapacity = highCapacityZones.includes(zoneName) ? 12 : 6;
-
-        // Split employees into groups based on vehicle capacity
-        for (let i = 0; i < zoneEmployees.length; i += maxCapacity) {
-          const routeEmployees = zoneEmployees.slice(i, i + maxCapacity);
-          const routeNumber = Math.floor(i / maxCapacity) + 1;
-          const timestamp = Date.now();
-          
-          routeData.routeData.push({
-            zone: zoneName,
-            employees: routeEmployees,
-            routeNumber: routeNumber,
-            isClubbed: false,
-            vehicleCapacity: maxCapacity,
-            uniqueKey: `${zoneName}_${routeNumber}_${timestamp}`
-          });
+          }
         }
-      });
-
-      // Validate route data before making the API call
+      }
+  
+      // Handle remaining zones in batches
+      const remainingZones = Object.entries(employeesByZone)
+        .filter(([zoneName]) => !processedZones.has(zoneName));
+  
+      for (let i = 0; i < remainingZones.length; i++) {
+        const [zoneName, zoneEmployees] = remainingZones[i];
+        if (zoneEmployees.length === 0) continue;
+  
+        const maxCapacity = highCapacityZones.includes(zoneName) ? 12 : 6;
+  
+        // Process employees in batches
+        for (let j = 0; j < zoneEmployees.length; j += BATCH_SIZE) {
+          const batch = zoneEmployees.slice(j, j + BATCH_SIZE);
+          const routes = await processEmployeeBatch(batch, maxCapacity, facility, calculateDistance);
+          routeData.routeData.push(...routes.map(route => ({
+            ...route,
+            zone: zoneName,
+            isClubbed: false
+          })));
+  
+          // Allow UI to update between batches
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+      }
+  
       if (routeData.routeData.length === 0) {
         throw new Error('No valid routes could be generated. Please check employee data and zone assignments.');
       }
-
+  
       const generatedRoutes = await routeService.create(routeData);
       setRoutes(generatedRoutes);
-      console.log("these are the generated routes", generatedRoutes);
       navigate(`/routes/${selectedProfile.id}`, { state: { routes: generatedRoutes } });
     } catch (error) {
       console.error('Failed to generate routes:', error);
@@ -174,11 +192,76 @@ function RouteGeneration() {
       setIsLoading(false);
     }
   };
+  const processEmployeeBatch = async (employees, maxCapacity, facility, calculateDistance) => {
+    const routes = [];
+    
+    // Validate and filter employees with valid locations
+    const validEmployees = employees.filter(emp => {
+      return emp.location && 
+             typeof emp.location.lat === 'number' && 
+             typeof emp.location.lng === 'number' && 
+             !isNaN(emp.location.lat) && 
+             !isNaN(emp.location.lng);
+    });
 
+    if (validEmployees.length === 0) {
+      console.warn('No valid employee locations found in batch');
+      return [];
+    }
+
+    // Sort employees by distance from facility (farthest first)
+    validEmployees.sort((a, b) => {
+      const distA = calculateDistance([a.location.lat, a.location.lng], facility);
+      const distB = calculateDistance([b.location.lat, b.location.lng], facility);
+      return distB - distA;
+    });
+  
+    // Create routes for this batch
+    for (let i = 0; i < validEmployees.length; i += maxCapacity) {
+      const routeGroup = validEmployees.slice(i, i + maxCapacity);
+      const routeEmployees = [routeGroup[0]];
+      let currentEmployee = routeGroup[0];
+      const remainingEmployees = routeGroup.slice(1);
+  
+      // Build sequence
+      while (remainingEmployees.length > 0) {
+        let bestScore = -1;
+        let bestIndex = -1;
+  
+        remainingEmployees.forEach((emp, index) => {
+          const distance = calculateDistance(
+            [currentEmployee.location.lat, currentEmployee.location.lng],
+            [emp.location.lat, emp.location.lng]
+          );
+          const score = 1 / (distance + 0.1);
+  
+          if (score > bestScore) {
+            bestScore = score;
+            bestIndex = index;
+          }
+        });
+  
+        if (bestIndex !== -1) {
+          const bestEmployee = remainingEmployees[bestIndex];
+          routeEmployees.push(bestEmployee);
+          remainingEmployees.splice(bestIndex, 1);
+          currentEmployee = bestEmployee;
+        }
+      }
+  
+      routes.push({
+        employees: routeEmployees,
+        routeNumber: Math.floor(i / maxCapacity) + 1,
+        vehicleCapacity: maxCapacity,
+        uniqueKey: `${routeEmployees[0].zone}_${Math.floor(i / maxCapacity) + 1}_${Date.now()}`
+      });
+    }
+  
+    return routes;
+  };
   const handleRouteSelect = (route) => {
     setSelectedRoute(route);
   };
-
   return (
     <div className="route-generation-page">
       {isLoading && <LoadingOverlay />}
