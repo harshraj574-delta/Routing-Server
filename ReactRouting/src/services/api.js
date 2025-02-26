@@ -38,6 +38,7 @@ export const profileService = {
       method: 'DELETE'
     });
     if (!response.ok) throw new Error('Failed to delete profile');
+    if (response.status === 204) return null;
     return response.json();
   }
 };

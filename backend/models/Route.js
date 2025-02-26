@@ -2,18 +2,19 @@ const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
   const Route = sequelize.define('Route', {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true
-    },
     profileId: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
         model: 'Profiles',
         key: 'id'
-      }
+      },
+      onDelete: 'CASCADE'
+    },
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
     },
     date: {
       type: DataTypes.DATEONLY,
@@ -47,6 +48,8 @@ module.exports = (sequelize) => {
       type: DataTypes.DATE,
       allowNull: false
     }
+  }, {
+    timestamps: true
   });
 
   return Route;

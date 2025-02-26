@@ -5,11 +5,11 @@ const RouteModel = require('./Route');
 const Profile = ProfileModel(sequelize);
 const Route = RouteModel(sequelize);
 
-// Define associations
-Profile.hasMany(Route);
+// Define associations with cascade delete
+Profile.hasMany(Route, { onDelete: 'CASCADE' });
 Route.belongsTo(Profile);
 
-sequelize.sync()
+sequelize.sync({ alter: true })
   .then(() => {
     console.log('Database synced successfully');
   })

@@ -71,13 +71,14 @@ const ProfileList = ({ onProfileSelect }) => {
   };
 
   const handleDeleteProfile = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this profile?')) return;
+    if (!window.confirm('Are you sure you want to delete this profile? This will also delete all associated routes.')) return;
     try {
       setLoading(true);
       await profileService.delete(id);
       await loadProfiles();
     } catch (err) {
       setError('Failed to delete profile');
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -89,46 +90,6 @@ const ProfileList = ({ onProfileSelect }) => {
   return (
     <div className="profile-list">
       <h2>Routing Profiles</h2>
-      <button onClick={() => setShowCreateForm(true)} className="create-btn">
-        Create New Profile
-      </button>
-
-      {showCreateForm && (
-        <form onSubmit={handleCreateProfile} className="create-form">
-          <input
-            type="text"
-            placeholder="Profile Name"
-            value={newProfile.name}
-            onChange={(e) => setNewProfile({ ...newProfile, name: e.target.value })}
-            required
-          />
-          <div className="checkbox-group">
-            <label>
-              <input
-                type="checkbox"
-                checked={newProfile.zoneClubbing}
-                onChange={(e) => setNewProfile({ ...newProfile, zoneClubbing: e.target.checked })}
-              />
-              Enable Zone Clubbing
-            </label>
-          </div>
-          <div className="checkbox-group">
-            <label>
-              <input
-                type="checkbox"
-                checked={newProfile.isAutoClubbing}
-                onChange={(e) => setNewProfile({ ...newProfile, isAutoClubbing: e.target.checked })}
-              />
-              Enable Auto Clubbing
-            </label>
-          </div>
-          <div className="form-buttons">
-            <button type="submit">Create</button>
-            <button type="button" onClick={() => setShowCreateForm(false)}>Cancel</button>
-          </div>
-        </form>
-      )}
-
       <div className="profiles-grid">
         {profiles.map(profile => (
           <div key={profile.id} className="profile-card">
