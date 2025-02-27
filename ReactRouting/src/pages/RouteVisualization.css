@@ -11,11 +11,12 @@
 }
 
 .left-panel {
-  width: 320px;
+  width: 380px;
   background-color: white;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
-  padding: 20px;
+  padding: 24px;
   overflow-y: auto;
+  border-right: 1px solid #e7eaf0;
 }
 
 .left-panel h2 {
@@ -28,20 +29,40 @@
 }
 
 .route-summary {
-  background-color: #f8fafc;
-  border-radius: 8px;
-  padding: 1.25rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  padding: 1.75rem;
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  margin: 1.25rem 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .route-summary p {
-  margin: 0.5rem 0;
-  color: #4a5568;
-  font-size: 0.95rem;
+  margin: 0;
+  padding: 1.25rem;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.route-summary p:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+.route-summary p::before {
+  content: attr(data-label);
+  font-size: 0.9rem;
+  color: #4a5568;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .route-list {

@@ -5,6 +5,7 @@ import ZoneLayer from '../components/ZoneLayer';
 import MapComponent from '../components/MapComponent';
 import LoadingOverlay from '../components/LoadingOverlay';
 import { loadZoneData } from '../utils/dataLoader';
+import { calculateRouteDuration } from '../utils/routeCalculations';
 import 'leaflet/dist/leaflet.css';
 import './RouteVisualization.css';
 
@@ -17,6 +18,7 @@ function RouteVisualization() {
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [zones, setZones] = useState([]);
   const [highCapacityZones, setHighCapacityZones] = useState(new Set());
+  const [routeDurations, setRouteDurations] = useState({});
 
   const facility = [28.402910, 76.998015];
 
@@ -31,6 +33,16 @@ function RouteVisualization() {
         if (routes.length > 0) {
           setSelectedRoute(routes[0]);
         }
+
+        // Calculate durations for all routes
+        const durations = {};
+        for (const route of routes) {
+          if (route.employees?.length > 0) {
+            const duration = await calculateRouteDuration(route, facility, routeData.shift || 'morning');
+            durations[route.uniqueKey || route.zone] = duration;
+          }
+        }
+        setRouteDurations(durations);
 
         // Identify high capacity zones based on employee count
         const highCapacityZoneSet = new Set();
@@ -49,7 +61,7 @@ function RouteVisualization() {
     };
 
     loadData();
-  }, [routes, routeData.averageOccupancy]);
+  }, [routes, routeData.averageOccupancy, routeData.shift]);
 
   return (
     <div className="route-visualization-page">
@@ -60,11 +72,10 @@ function RouteVisualization() {
         <div className="left-panel">
           <h2>Route Information</h2>
           <div className="route-summary">
-            <p>Total Routes: {routeData.totalRoutes || 0}</p>
-            <p>Total Employees: {routeData.totalEmployees || 0}</p>
-            <p>Average Occupancy: {routeData.averageOccupancy?.toFixed(2) || '0.00'}</p>
-            <p>Date: {routeData.date || 'N/A'}</p>
-            <p>Shift: {routeData.shift || 'N/A'}</p>
+            <p data-label="Total Routes">{routeData.totalRoutes || 0}</p>
+            <p data-label="Total Employees">{routeData.totalEmployees || 0}</p>
+            <p data-label="Average Occupancy">{routeData.averageOccupancy?.toFixed(2) || '0.00'}</p>
+            <p data-label="Date">{routeData.date || 'N/A'}</p>
           </div>
           <div className="route-list">
             {Array.isArray(routes) && routes.map((route, index) => (
@@ -77,6 +88,13 @@ function RouteVisualization() {
                 <p>Employees: {route.employees?.length || 0}</p>
                 {route.employees?.length > routeData.averageOccupancy && (
                   <p className="high-capacity-warning">High Capacity Zone</p>
+                )}
+                {route.employees?.length > 0 && routeDurations[route.uniqueKey || route.zone] && (
+                  <div className="route-duration">
+                    <p>Total Duration: {routeDurations[route.uniqueKey || route.zone].total} mins</p>
+                    <p>Travel Time: {routeDurations[route.uniqueKey || route.zone].travel} mins</p>
+                    <p>Pickup Time: {routeDurations[route.uniqueKey || route.zone].pickup} mins</p>
+                  </div>
                 )}
               </div>
             ))}
