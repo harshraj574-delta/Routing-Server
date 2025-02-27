@@ -1,96 +1,105 @@
-.profile-list {
-  padding: 0;
+.profile-management-page {
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
-.create-btn {
+@media (min-width: 768px) {
+  .profile-management-page {
+    padding: 2rem;
+  }
+}
+
+.profile-management-content {
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  padding: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  .profile-management-content {
+    padding: 2rem;
+  }
+}
+
+.profile-management-content h1 {
+  color: #2c3e50;
+  font-size: 2.5rem;
+  font-weight: 600;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 1rem;
+}
+
+.create-profile-btn {
   background-color: #4361ee;
   color: white;
   padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 8px;
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   margin-bottom: 1.5rem;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  width: 100%;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(67, 97, 238, 0.2);
 }
 
-.create-btn:hover {
+@media (min-width: 640px) {
+  .create-profile-btn {
+    width: auto;
+  }
+}
+
+.create-profile-btn:hover {
   background-color: #3730a3;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(67, 97, 238, 0.15);
 }
 
-.create-form {
-  background-color: white;
-  padding: 1.5rem;
-  border-radius: 12px;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e9ecef;
+.create-profile-btn:active {
+  transform: translateY(0);
 }
 
-.create-form input[type="text"] {
-  width: 100%;
-  padding: 0.75rem;
-  margin-bottom: 1rem;
-  border: 1px solid #e9ecef;
+.error-message {
+  background-color: #fee2e2;
+  color: #dc2626;
+  padding: 1rem;
   border-radius: 8px;
-  font-size: 1rem;
-  transition: border-color 0.2s ease;
-}
-
-.create-form input[type="text"]:focus {
-  outline: none;
-  border-color: #4361ee;
-  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
-}
-
-.checkbox-group {
   margin-bottom: 1rem;
-}
-
-.checkbox-group label {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #4b5563;
-  font-size: 1rem;
 }
 
-.form-buttons {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1.5rem;
-}
-
-.form-buttons button {
-  flex: 1;
-  padding: 0.75rem 1rem;
-  border: none;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.form-buttons button[type="submit"] {
-  background-color: #4361ee;
-  color: white;
-}
-
-.form-buttons button[type="button"] {
-  background-color: #ef4444;
-  color: white;
+/* Update ProfileList styles */
+.profile-list {
+  padding: 0;
 }
 
 .profiles-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .profiles-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
 }
 
 .profile-card {
@@ -136,7 +145,7 @@
 
 .profile-actions button {
   flex: 1;
-  padding: 8px 16px;
+  padding: 0.5rem 1rem;
   border: none;
   border-radius: 6px;
   font-weight: 500;
@@ -144,12 +153,12 @@
   transition: all 0.2s ease;
 }
 
-.profile-actions button:first-child {
+.profile-actions button.edit {
   background-color: #3b82f6;
   color: white;
 }
 
-.delete-btn {
+.profile-actions button.delete {
   background-color: #ef4444;
   color: white;
 }
@@ -157,16 +166,4 @@
 .profile-actions button:hover {
   opacity: 0.9;
   transform: translateY(-1px);
-}
-
-.error {
-  background-color: #fee2e2;
-  color: #dc2626;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  border: none;
 }

@@ -94,7 +94,6 @@ const ProfileModal = ({ onClose, onSave, zones }) => {
     const newPairs = [...zonePairs];
     newPairs[index][field] = value;
     setZonePairs(newPairs);
-    updateZonePairingMatrix(newPairs);
   };
 
   const updateZonePairingMatrix = (pairs) => {
@@ -114,10 +113,7 @@ const ProfileModal = ({ onClose, onSave, zones }) => {
         }
       });
     }
-    setFormData(prev => ({
-      ...prev,
-      zonePairingMatrix: matrix
-    }));
+    // Store the matrix in state but don't update formData until save
   };
 
   const calculateDirectionVector = (point1, point2) => {
@@ -242,7 +238,27 @@ const ProfileModal = ({ onClose, onSave, zones }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(formData);
+    const matrix = {};
+    if (formData.zoneClubbing && zonePairs.length > 0) {
+      zonePairs.forEach(pair => {
+        if (pair.zone1 && pair.zone2) {
+          if (!matrix[pair.zone1]) matrix[pair.zone1] = [];
+          if (!matrix[pair.zone2]) matrix[pair.zone2] = [];
+          
+          if (!matrix[pair.zone1].includes(pair.zone2)) {
+            matrix[pair.zone1].push(pair.zone2);
+          }
+          if (!matrix[pair.zone2].includes(pair.zone1)) {
+            matrix[pair.zone2].push(pair.zone1);
+          }
+        }
+      });
+    }
+    
+    onSave({
+      ...formData,
+      zonePairingMatrix: matrix
+    });
   };
 
   return (
@@ -315,8 +331,12 @@ const ProfileModal = ({ onClose, onSave, zones }) => {
                   <h4>Zone Pairs for Clubbing</h4>
                   <div className="auto-club-section">
                     <button 
+                      type="button"
                       className="auto-club-btn"
-                      onClick={autoClubZones}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        autoClubZones();
+                      }}
                     >
                       Auto Club Selected Zones
                     </button>
@@ -356,7 +376,10 @@ const ProfileModal = ({ onClose, onSave, zones }) => {
                       </div>
                     ))}
                   </div>
-                  <button className="add-pair-btn" onClick={addNewPair}>
+                  <button type="button" className="add-pair-btn" onClick={(e) => {
+                    e.preventDefault();
+                    addNewPair();
+                  }}>
                     Add New Pair
                   </button>
                 </div>

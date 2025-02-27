@@ -66,13 +66,16 @@ export const loadEmployeeData = async () => {
               // Use [longitude, latitude] format for zone assignment
               const location = [longitude, latitude];
               const zone = assignZoneToEmployee(location, zoneData);
+
+              console.log("dataloader emp is",emp)
               
               return {
                 id: emp.empCode,
                 name: emp.name || emp.empCode,
                 location: { lat: latitude, lng: longitude }, // Store as object format for Leaflet
                 address: emp.address || '',
-                zone: zone
+                zone: zone,
+                gender: emp.gender || 'unknown'
               };
             })
             .filter(emp => emp.zone !== null);

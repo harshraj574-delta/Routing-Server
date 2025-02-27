@@ -9,7 +9,7 @@ const Route = RouteModel(sequelize);
 Profile.hasMany(Route, { onDelete: 'CASCADE' });
 Route.belongsTo(Profile);
 
-sequelize.sync({ alter: true })
+sequelize.sync({ force: true })
   .then(() => {
     console.log('Database synced successfully');
   })

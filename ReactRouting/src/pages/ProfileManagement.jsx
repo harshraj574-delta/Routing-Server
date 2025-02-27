@@ -4,6 +4,7 @@ import LoadingOverlay from '../components/LoadingOverlay';
 import ProfileModal from '../components/ProfileModal';
 import { profileService } from '../services/api';
 import { loadZoneData } from '../utils/dataLoader';
+import './ProfileManagement.css';
 const { useState, useEffect } = React;
 
 function ProfileManagement() {

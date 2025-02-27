@@ -6,6 +6,7 @@ import MapComponent from '../components/MapComponent';
 import LoadingOverlay from '../components/LoadingOverlay';
 import { loadZoneData } from '../utils/dataLoader';
 import 'leaflet/dist/leaflet.css';
+import './RouteVisualization.css';
 
 function RouteVisualization() {
   const location = useLocation();
@@ -55,8 +56,8 @@ function RouteVisualization() {
       {isLoading && <LoadingOverlay />}
       {error && <div className="error-message">{error}</div>}
       
-      <div className="route-visualization-content" style={{ display: 'flex', height: '100vh' }}>
-        <div className="left-panel" style={{ width: '300px', overflowY: 'auto' }}>
+      <div className="route-visualization-content">
+        <div className="left-panel">
           <h2>Route Information</h2>
           <div className="route-summary">
             <p>Total Routes: {routeData.totalRoutes || 0}</p>
@@ -82,7 +83,7 @@ function RouteVisualization() {
           </div>
         </div>
         
-        <div className="map-container" style={{ flex: 1, position: 'relative' }}>
+        <div className="map-container">
           <MapContainer
             center={facility}
             zoom={11}

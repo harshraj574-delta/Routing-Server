@@ -96,7 +96,7 @@ const ProfileList = ({ onProfileSelect }) => {
             <h3>{profile.name}</h3>
             <div className="profile-details">
               <p>Zone Clubbing: {profile.zoneClubbing ? 'Enabled' : 'Disabled'}</p>
-              <p>Auto Clubbing: {profile.isAutoClubbing ? 'Enabled' : 'Disabled'}</p>
+              {/* <p>Auto Clubbing: {profile.isAutoClubbing ? 'Enabled' : 'Disabled'}</p> */}
             </div>
             <div className="profile-actions">
               {onProfileSelect && (

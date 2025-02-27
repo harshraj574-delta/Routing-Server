@@ -25,6 +25,7 @@ function RouteGeneration() {
           loadZoneData()
         ]);
         setEmployeeData(employees);
+        console.log("employees",employees);
         setZones(zoneData.features || []);
       } catch (error) {
         console.error('Failed to load data:', error);
@@ -79,7 +80,8 @@ function RouteGeneration() {
             name: emp.name,
             zone: emp.zone,
             address: emp.address || 'No address provided',
-            location: emp.location
+            location: emp.location,
+            gender: emp.gender
           }));
   
         if (zoneEmployees.length > 0) {

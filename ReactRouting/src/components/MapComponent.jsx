@@ -6,8 +6,8 @@ import './MapComponent.css';
 // Create custom icons
 const maleEmployeeIcon = L.divIcon({
   className: 'employee-icon male',
-  iconSize: [12, 12],
-  iconAnchor: [6, 6]
+  iconSize: [24, 24],
+  iconAnchor: [8, 8]
 });
 
 const femaleEmployeeIcon = L.divIcon({
@@ -16,13 +16,14 @@ const femaleEmployeeIcon = L.divIcon({
   iconAnchor: [6, 6]
 });
 
-const createEmployeeIcon = (gender = 'unknown', order) => {
+const createEmployeeIcon = (gender, order) => {
   const genderClass = gender && typeof gender === 'string' ? gender.toLowerCase() : 'unknown';
+  console.log(genderClass);
   return L.divIcon({
     className: `employee-icon ${genderClass}`,
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
-    html: `<div class="employee-marker">${order}</div>`
+    iconSize: [36, 18],
+    iconAnchor: [18, 9],
+    // html: `<div class="employee-marker">${order}</div>`
   });
 };
 
@@ -73,7 +74,9 @@ function MapComponent({ route, facility }) {
           });
       
           // Add employee markers
+          console.log("the route is ",route);
           route.employees.forEach((emp, index) => {
+            console.log("the emp data is",emp);
             const coords = employeeCoordinates[index];
             const icon = createEmployeeIcon(emp.gender, index + 1);
             const marker = L.marker(coords, { icon })

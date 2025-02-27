@@ -2,15 +2,6 @@ const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
   const Route = sequelize.define('Route', {
-    profileId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'Profiles',
-        key: 'id'
-      },
-      onDelete: 'CASCADE'
-    },
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
