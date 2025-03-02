@@ -1,9 +1,11 @@
 const { sequelize } = require('../config/database');
 const ProfileModel = require('./Profile');
 const RouteModel = require('./Route');
+const EmployeeModel = require('./Employee');
 
 const Profile = ProfileModel(sequelize);
 const Route = RouteModel(sequelize);
+const Employee = EmployeeModel(sequelize);
 
 // Define associations with cascade delete
 Profile.hasMany(Route, { onDelete: 'CASCADE' });
@@ -19,5 +21,6 @@ sequelize.sync({ force: false })
 
 module.exports = {
   Profile,
-  Route
+  Route,
+  Employee
 };

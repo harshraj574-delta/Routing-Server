@@ -54,3 +54,17 @@
 .info-value {
   color: #333;
 }
+
+.route-tracker {
+  padding: 10px;
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin: 5px;
+}
+
+.route-tracker div {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #333;
+}

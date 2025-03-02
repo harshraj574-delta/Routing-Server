@@ -1,4 +1,5 @@
 import Papa from 'papaparse';
+import { employeeService } from '../services/employeeService';
 
 export const assignZoneToEmployee = (employeeLocation, zones) => {
   for (const feature of zones.features) {
@@ -31,64 +32,29 @@ const isPointInPolygon = (point, polygon) => {
 
 export const loadEmployeeData = async () => {
   try {
-    const response = await fetch('/NCR_emp_data.csv');
-    const zoneResponse = await fetch('/delhi_ncr_zones.json');
-
-    if (!response.ok || !zoneResponse.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const [csvText, zoneData] = await Promise.all([
-      response.text(),
-      zoneResponse.json()
+    console.log('Starting to load employee data...');
+    const [employees, zoneData] = await Promise.all([
+      employeeService.getEmployeeData(),
+      fetch('/delhi_ncr_zones.json').then(res => res.json())
     ]);
 
-    return new Promise((resolve, reject) => {
-      Papa.parse(csvText, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          if (results.errors.length > 0) {
-            console.error('CSV parsing errors:', results.errors);
-          }
-          const employees = results.data
-            .filter(emp => 
-              emp.empCode && 
-              emp.geoX && 
-              emp.geoY && 
-              !isNaN(parseFloat(emp.geoX)) && 
-              !isNaN(parseFloat(emp.geoY))
-            )
-            .map(emp => {
-              const longitude = parseFloat(emp.geoX);
-              const latitude = parseFloat(emp.geoY);
-              
-              // Use [longitude, latitude] format for zone assignment
-              const location = [longitude, latitude];
-              const zone = assignZoneToEmployee(location, zoneData);
+    console.log('Received employees:', employees);
+    console.log('Received zone data:', zoneData);
 
-              console.log("dataloader emp is",emp)
-              
-              return {
-                id: emp.empCode,
-                name: emp.name || emp.empCode,
-                location: { lat: latitude, lng: longitude }, // Store as object format for Leaflet
-                address: emp.address || '',
-                zone: zone,
-                gender: emp.gender || 'unknown'
-              };
-            })
-            .filter(emp => emp.zone !== null);
-          
-          console.log(`Loaded ${employees.length} employees with valid zones`);
-          resolve(employees);
-        },
-        error: (error) => {
-          console.error('CSV parsing error:', error);
-          reject(new Error(`Failed to parse CSV: ${error.message}`));
-        }
-      });
-    });
+    // Process employees and assign zones
+    const processedEmployees = employees.map(emp => {
+      const location = [emp.location.lng, emp.location.lat];
+      const zone = assignZoneToEmployee(location, zoneData);
+      
+      return {
+        ...emp,
+        zone
+      };
+    }).filter(emp => emp.zone !== null);
+
+    console.log('Processed employees:', processedEmployees);
+    return processedEmployees;
+
   } catch (error) {
     console.error('Employee data loading error:', error);
     throw new Error(`Failed to load employee data: ${error.message}`);

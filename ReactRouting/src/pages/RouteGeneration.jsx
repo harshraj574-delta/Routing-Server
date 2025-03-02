@@ -24,6 +24,7 @@ function RouteGeneration() {
           loadEmployeeData(),
           loadZoneData()
         ]);
+        console.log('Employee data with shift times:', employees);
         setEmployeeData(employees);
         console.log("employees",employees);
         setZones(zoneData.features || []);
@@ -81,7 +82,8 @@ function RouteGeneration() {
             zone: emp.zone,
             address: emp.address || 'No address provided',
             location: emp.location,
-            gender: emp.gender
+            gender: emp.gender,
+            shift: emp.shift
           }));
   
         if (zoneEmployees.length > 0) {

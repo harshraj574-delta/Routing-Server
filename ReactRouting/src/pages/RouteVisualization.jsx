@@ -39,6 +39,7 @@ function RouteVisualization() {
         for (const route of routes) {
           if (route.employees?.length > 0) {
             const duration = await calculateRouteDuration(route, facility, routeData.shift || 'morning');
+            console.log('Duration:', duration);
             durations[route.uniqueKey || route.zone] = duration;
           }
         }
