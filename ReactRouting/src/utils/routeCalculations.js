@@ -32,6 +32,7 @@ export const calculateRouteDuration = async (route, facility, shift = 'morning')
   const employeeCoords = route.employees.map(emp => [emp.location.lat, emp.location.lng]);
   const waypoints = [...employeeCoords, facility];
   const waypointsString = waypoints.map(point => `${point[1]},${point[0]}`).join(';');
+  console.log("waypoint string",waypointsString);
 
   try {
     // Make request to OSRM server
@@ -62,4 +63,3 @@ export const calculateRouteDuration = async (route, facility, shift = 'morning')
     return { total: 0, travel: 0, pickup: 0 };
   }
 };
-

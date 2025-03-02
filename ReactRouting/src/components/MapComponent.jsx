@@ -140,11 +140,11 @@ function MapComponent({ route, facility }) {
         data={zoneData}
         style={(feature) => ({
           fillColor: feature.properties.fill || '#3388ff',
-          fillOpacity: 0.4,
+          fillOpacity: 0.3,
           weight: 2,
           opacity: 1,
           color: 'white',
-          dashArray: '3'
+          dashArray: '4 4'
         })}
       />}
     </>
