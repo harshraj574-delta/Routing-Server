@@ -61,6 +61,23 @@
   color: rgba(255, 255, 255, 0.9);
 }
 
+.route-item.exceeds-limit {
+  border-color: #ef4444;
+  background-color: #fee2e2;
+}
+
+.duration {
+  font-weight: 500;
+  color: #374151;
+  margin-top: 8px;
+}
+
+.duration-warning {
+  color: #ef4444;
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
 #sidebar:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);

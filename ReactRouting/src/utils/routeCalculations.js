@@ -38,8 +38,6 @@ const parseMilitaryTime = (timeNumber) => {
 
 // Calculate ETA based on duration and shift time
 const calculateETA = (durationInSeconds, shiftTime) => {
-  console.log('Calculating ETA for:', { durationInSeconds, shiftTime }); // Debug log
-
   if (!shiftTime && shiftTime !== 0) {
     console.log('No shift time provided');
     return 'N/A';
@@ -51,8 +49,6 @@ const calculateETA = (durationInSeconds, shiftTime) => {
       console.log('Could not parse shift time:', shiftTime);
       return 'N/A';
     }
-
-    console.log('Parsed time:', parsedTime); // Debug log
 
     const eta = new Date();
     eta.setHours(parsedTime.hours, parsedTime.minutes, 0, 0); // Set to shift time
@@ -66,7 +62,6 @@ const calculateETA = (durationInSeconds, shiftTime) => {
       hour12: true
     });
     
-    console.log('Calculated pickup time:', pickupTime); // Debug log
     return pickupTime;
   } catch (error) {
     console.error('Error calculating ETA:', error);
@@ -127,47 +122,62 @@ export const calculateRouteDetails = async (routeCoordinates, employees) => {
     // Prepare waypoints for OSRM request
     const waypointsString = routeCoordinates.map(coord => `${coord[1]},${coord[0]}`).join(';');
     
-    console.log('Processing employees:', employees); // Debug log
-    
     // Make request to OSRM server
     const url = `http://localhost:5000/route/v1/driving/${waypointsString}?overview=false`;
     const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
 
-    let totalDistance = 0;
-    let totalDuration = 0;
+    const legs = data.routes[0].legs;
+    
+    // Constants for time calculations
+    const TRAFFIC_BUFFER_FACTOR = 1.6; // 40% extra time for traffic
+    const PICKUP_TIME_PER_EMPLOYEE = 180; // 3 minutes (180 seconds) per employee pickup
 
-    // Calculate route details for each employee
-    const employeeDetails = await Promise.all(
-      employees.map(async (employee, index) => {
-        console.log('Processing employee:', employee); // Debug log
+    // Calculate total route time including traffic and pickups
+    const totalBaseTime = legs.reduce((sum, leg) => sum + (leg?.duration || 0), 0);
+    const totalTimeWithTraffic = totalBaseTime * TRAFFIC_BUFFER_FACTOR;
+    const totalPickupTime = PICKUP_TIME_PER_EMPLOYEE * employees.length;
+    const totalRouteTime = totalTimeWithTraffic + totalPickupTime;
 
-        // Get duration to next point from OSRM response
-        const durationToNextPoint = data.routes[0].legs[index]?.duration || 0;
-        const distanceToNextPoint = data.routes[0].legs[index]?.distance || 0;
+    // Calculate start time by working backwards from shift time
+    const employeeDetails = employees.map((employee, index) => {
+        const durationToNextPoint = legs[index]?.duration || 0;
+        const distanceToNextPoint = legs[index]?.distance || 0;
+        
+        // Calculate time needed after this pickup including time to facility
+        const remainingLegs = legs.slice(index);  // Include all remaining legs including to facility
+        const remainingBaseTime = remainingLegs.reduce((sum, leg) => sum + (leg?.duration || 0), 0);
+        const remainingTimeWithTraffic = remainingBaseTime * TRAFFIC_BUFFER_FACTOR;
+        const remainingPickups = employees.length - index;
+        const remainingPickupTime = remainingPickups * PICKUP_TIME_PER_EMPLOYEE;
+        const timeNeededAfterPickup = remainingTimeWithTraffic + remainingPickupTime;
 
-        totalDuration += durationToNextPoint;
-        totalDistance += distanceToNextPoint;
+        // Calculate pickup time by subtracting from shift time
+        const pickupTime = calculateETA(timeNeededAfterPickup, employee.shiftTime);
 
-        // Calculate pickup time using shift time
-        const pickupTime = calculateETA(durationToNextPoint, employee.shiftTime);
-        console.log('Pickup time:', pickupTime); // Debug log
+        console.log(`Employee ${employee.id} (order ${index + 1}):`, {
+            remainingBaseTime,
+            remainingTimeWithTraffic,
+            remainingPickupTime,
+            timeNeededAfterPickup,
+            pickupTime,
+            shiftTime: employee.shiftTime
+        });
 
         return {
-          ...employee,
-          duration: durationToNextPoint,
-          distance: distanceToNextPoint,
-          pickupTime: pickupTime,
-          order: index + 1
+            ...employee,
+            duration: durationToNextPoint,
+            distance: distanceToNextPoint,
+            pickupTime: pickupTime,
+            order: index + 1
         };
-      })
-    );
+    });
 
     return {
-      employees: employeeDetails,
-      totalDistance: totalDistance,
-      totalDuration: totalDuration
+        employees: employeeDetails,
+        totalDistance: legs.reduce((sum, leg) => sum + (leg?.distance || 0), 0),
+        totalDuration: totalRouteTime
     };
   } catch (error) {
     console.error('Error calculating route details:', error);
