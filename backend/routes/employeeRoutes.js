@@ -12,7 +12,7 @@ router.options('/', (req, res) => {
 
 // GET /api/employees
 router.get('/', (req, res, next) => {
-  console.log('Employee route hit');
+  console.log('Employee route hit with query:', req.query);
   employeeController.getAllEmployees(req, res).catch(next);
 });
 

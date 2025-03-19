@@ -154,7 +154,7 @@ export const calculateRouteDetails = async (routeCoordinates, employees) => {
         const timeNeededAfterPickup = remainingTimeWithTraffic + remainingPickupTime;
 
         // Calculate pickup time by subtracting from shift time
-        const pickupTime = calculateETA(timeNeededAfterPickup, employee.shiftTime);
+        const pickupTime = calculateETA(timeNeededAfterPickup, employee.shift);
 
         console.log(`Employee ${employee.id} (order ${index + 1}):`, {
             remainingBaseTime,
@@ -162,7 +162,7 @@ export const calculateRouteDetails = async (routeCoordinates, employees) => {
             remainingPickupTime,
             timeNeededAfterPickup,
             pickupTime,
-            shiftTime: employee.shiftTime
+            shift: employee.shift
         });
 
         return {

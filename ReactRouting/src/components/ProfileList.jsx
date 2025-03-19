@@ -19,13 +19,12 @@ const ProfileList = ({ onProfileSelect }) => {
 
   useEffect(() => {
     loadProfiles();
-    loadEmployeeData();
   }, []);
 
-  const loadEmployeeData = async () => {
+  const loadEmployeeData = async (shift) => {
     try {
       setLoading(true);
-      const data = await employeeService.getEmployeeData();
+      const data = await employeeService.getEmployeeData(shift);
       setEmployees(data);
       setError(null);
     } catch (err) {

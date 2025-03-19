@@ -1,13 +1,34 @@
 /* Route Visualization Page Styles */
-.route-visualization-page {
+/* .route-visualization {
+  position: relative;
   height: 100vh;
-  width: 100%;
-  background-color: #f5f7fa;
+  width: 100vw;
+  overflow: hidden;
+} */
+
+/* Sidebar styling */
+.sidebar {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 350px;
+  max-height: calc(100vh - 40px);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  z-index: 1000;
+  overflow-y: auto;
+  padding: 1.5rem;
+  backdrop-filter: blur(5px);
 }
 
-.route-visualization-content {
-  display: flex;
-  height: 100vh;
+.sidebar-header h2 {
+  color: #2c3e50;
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  border-bottom: 2px solid #e7eaf0;
+  padding-bottom: 0.75rem;
 }
 
 .left-panel {
@@ -115,17 +136,6 @@
   color: #1e293b;
   text-align: center;
 }
-  /* margin-bottom: 1.5rem;
-  padding: 1rem;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-  color: #2c3e50;
-} */
 
 .route-summary p::before {
   content: attr(data-label);
@@ -154,6 +164,7 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  margin-top: 1.5rem;
 }
 
 .route-item {
@@ -170,7 +181,6 @@
 .route-item:hover {
   transform: translateY(-3px);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-  /* border-color: #3b82f6; */
   background: linear-gradient(to right bottom, #ffffff, #f8fafc);
 }
 
@@ -221,9 +231,151 @@
   position: relative;
 }
 
-.route-visualization {
+.route-details {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 300px;
+  max-height: calc(100vh - 40px);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  z-index: 1000;
+  overflow-y: auto;
+  padding: 1rem;
+  backdrop-filter: blur(5px);
+}
+
+.route-section {
+  margin-bottom: 20px;
+}
+
+.route-section h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 1.2em;
+}
+
+/* Popup styles */
+.popup-content {
+  padding: 10px;
+}
+
+.popup-content h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.popup-content p {
+  margin: 5px 0;
+  color: #666;
+}
+
+/* Route tracker styles */
+.route-tracker {
+  padding: 15px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.route-tracker:hover {
+  background-color: #f8f9fa;
+  border-color: #007bff;
+}
+
+.route-tracker.selected {
+  background-color: #e7f1ff;
+  border-color: #007bff;
+}
+
+.route-tracker div {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+/* Loading overlay styles */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  height: 100vh;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  color: white;
+  margin-top: 20px;
+  font-size: 18px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+.visualization-content {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Adjust map container to fill its parent */
+.visualization-content .map-container {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  flex: 1;
+}
+
+/* Style route details panel */
+.route-details {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 300px;
+  max-height: calc(100vh - 40px);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  z-index: 1000;
+  overflow-y: auto;
+  padding: 1rem;
+  backdrop-filter: blur(5px);
+}
+
+.route-section {
+  margin-bottom: 1rem;
+}
+
+.route-section h3 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .route-list {
@@ -245,38 +397,120 @@
 }
 
 .route-button.selected {
-  background: #2196F3;
+  background: #2196f3;
   color: white;
 }
 
 .visualization-content {
   flex: 1;
   display: flex;
+  flex-direction: column;
+  margin-left: 300px; /* Width of the sidebar */
+  height: 100vh;
+  overflow: hidden;
 }
 
 .map-container {
-  flex: 2;
-  height: 100%;
+  flex: 1;
   position: relative;
+  min-height: 0; /* Important for Firefox */
 }
 
 .route-details {
-  flex: 1;
-  padding: 1rem;
+  height: 300px;
+  background-color: white;
+  border-top: 1px solid #ddd;
+  padding: 20px;
   overflow-y: auto;
-  background: white;
-  border-left: 1px solid #e2e8f0;
 }
 
 .route-section {
-  padding: 1rem;
-  background: #f8fafc;
-  border-radius: 8px;
-  margin-bottom: 1rem;
+  margin-bottom: 20px;
 }
 
 .route-section h3 {
-  margin-bottom: 1rem;
-  color: #2d3748;
-  font-size: 1.2rem;
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 1.2em;
 }
+
+/* Popup styles */
+.popup-content {
+  padding: 10px;
+}
+
+.popup-content h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.popup-content p {
+  margin: 5px 0;
+  color: #666;
+}
+
+/* Route tracker styles */
+.route-tracker {
+  padding: 15px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.route-tracker:hover {
+  background-color: #f8f9fa;
+  border-color: #007bff;
+}
+
+.route-tracker.selected {
+  background-color: #e7f1ff;
+  border-color: #007bff;
+}
+
+.route-tracker div {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+/* Loading overlay styles */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  color: white;
+  margin-top: 20px;
+  font-size: 18px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+

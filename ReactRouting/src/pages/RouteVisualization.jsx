@@ -1,168 +1,189 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
-import { MapContainer, TileLayer } from 'react-leaflet';
-import MapComponent from '../components/MapComponent';
-import RouteTracker from '../components/RouteTracker';
-import Sidebar from '../components/Sidebar';
-import LoadingOverlay from '../components/LoadingOverlay';
-import { loadZoneData } from '../utils/dataLoader';
-import { calculateRouteDuration, calculateRouteDetails } from '../utils/routeCalculations';
-import ZoneLayer from '../components/ZoneLayer';
-import 'leaflet/dist/leaflet.css';
-import './RouteVisualization.css';
+"use client"
+
+import React, { useState, useEffect, useCallback, useMemo } from "react"
+import { useParams, useLocation } from "react-router-dom"
+import { MapContainer, TileLayer } from "react-leaflet"
+import MapComponent from "../components/MapComponent"
+import RouteTracker from "../components/RouteTracker"
+import Sidebar from "../components/Sidebar"
+import LoadingOverlay from "../components/LoadingOverlay"
+import { loadZoneData } from "../utils/dataLoader"
+import { calculateRouteDetails } from "../utils/routeCalculations"
+import ZoneLayer from "../components/ZoneLayer"
+import "leaflet/dist/leaflet.css"
+import "./RouteVisualization.css"
 
 function RouteVisualization() {
-  const { profileId } = useParams();
-  const location = useLocation();
-  const routeData = location.state?.routes || { routeData: [] };
-  const [routes, setRoutes] = useState([]);
-  const [selectedRoute, setSelectedRoute] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [zones, setZones] = useState([]);
-  const [highCapacityZones, setHighCapacityZones] = useState(new Set());
-  const [routeDurations, setRouteDurations] = useState({});
-  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const { profileId } = useParams()
+  const location = useLocation()
+  const { routes, profile, facility, shift, tripType, employeeData } = location.state || {}
 
-  const facility = [28.402910, 76.998015];
+  // Memoize initial state values
+  const [processedRoutes, setProcessedRoutes] = useState([])
+  const [selectedRoute, setSelectedRoute] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [zones, setZones] = useState([])
+  const [highCapacityZones, setHighCapacityZones] = useState(new Set())
+  const [selectedEmployee, setSelectedEmployee] = useState(null)
 
+  // Memoize facility coordinates
+  const facilityCoordinates = useMemo(
+    () => (facility ? [facility.geoY, facility.geoX] : [28.40291, 76.998015]),
+    [facility],
+  )
+
+  // Memoize route processing function
+  const processRoutes = useCallback(
+    async (routesData) => {
+      if (!routesData?.routeData) return []
+
+      // Create set of high capacity zones
+      const highCapacityZoneSet = new Set(
+        routesData.routeData.reduce((acc, route) => {
+          if (route.vehicleCapacity > 4) {
+            acc.push(route.zone)
+          }
+          return acc
+        }, []),
+      )
+      setHighCapacityZones(highCapacityZoneSet)
+
+      // Process all routes
+      const processed = await Promise.all(
+        routesData.routeData.map(async (route) => {
+          const coordinates = [
+            ...route.employees.map((emp) => [emp.location.lat, emp.location.lng]),
+            facilityCoordinates,
+          ]
+
+          try {
+            const details = await calculateRouteDetails(coordinates, route.employees)
+            return {
+              ...route,
+              employees: details.employees,
+              totalDistance: details.totalDistance,
+              totalDuration: details.totalDuration,
+            }
+          } catch (error) {
+            console.error("Error calculating route details:", error)
+            return route
+          }
+        }),
+      )
+
+      return processed
+    },
+    [facilityCoordinates],
+  )
+
+  // Load initial data
   useEffect(() => {
+    let isMounted = true
+
     const loadData = async () => {
       try {
-        setLoading(true);
-        const zoneData = await loadZoneData();
-        setZones(zoneData.features || []);
+        setLoading(true)
+        const zoneData = await loadZoneData()
 
-        // Process routes from the route data
-        const routes = routeData.routeData || [];
-        
-        // Create set of high capacity zones
-        const highCapacityZoneSet = new Set(routes.reduce((acc, route) => {
-          if (route.vehicleCapacity > 4) {
-            acc.push(route.zone);
+        if (isMounted) {
+          setZones(zoneData.features || [])
+
+          if (routes) {
+            const processed = await processRoutes(routes)
+
+            if (isMounted) {
+              setProcessedRoutes(processed)
+
+              // Set the first route as selected
+              if (processed.length > 0) {
+                setSelectedRoute(processed[0])
+                setSelectedEmployee(processed[0].employees[0])
+              }
+            }
           }
-          return acc;
-        }, []));
-        setHighCapacityZones(highCapacityZoneSet);
-
-        // Process only the first route initially
-        if (routes.length > 0) {
-          const firstRoute = routes[0];
-          const coordinates = firstRoute.employees.map(emp => [emp.location.lat, emp.location.lng]);
-          coordinates.push(facility);
-
-          // Add shift time to each employee
-          const employeesWithShift = firstRoute.employees.map(emp => ({
-            ...emp,
-            shiftTime: 1230 // Add the shift time here
-          }));
-
-          const routeDetails = await calculateRouteDetails(coordinates, employeesWithShift);
-          const processedRoute = {
-            ...firstRoute,
-            employees: routeDetails.employees,
-            totalDistance: routeDetails.totalDistance,
-            totalDuration: routeDetails.totalDuration
-          };
-
-          setSelectedRoute(processedRoute);
-          setSelectedEmployee(processedRoute.employees[0]);
-          setRoutes(routes); // Store unprocessed routes
         }
-
       } catch (error) {
-        console.error('Failed to load data:', error);
+        console.error("Failed to load data:", error)
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false)
+        }
       }
-    };
-
-    loadData();
-  }, [routeData]);
-
-  const handleRouteSelect = async (route) => {
-    try {
-      setLoading(true);
-      const coordinates = route.employees.map(emp => [emp.location.lat, emp.location.lng]);
-      coordinates.push(facility);
-
-      // Add shift time to each employee
-      const employeesWithShift = route.employees.map(emp => ({
-        ...emp,
-        shiftTime: 1230 // Add the shift time here
-      }));
-
-      const routeDetails = await calculateRouteDetails(coordinates, employeesWithShift);
-      const processedRoute = {
-        ...route,
-        employees: routeDetails.employees,
-        totalDistance: routeDetails.totalDistance,
-        totalDuration: routeDetails.totalDuration
-      };
-
-      setSelectedRoute(processedRoute);
-      setSelectedEmployee(processedRoute.employees[0]);
-    } catch (error) {
-      console.error('Error processing route:', error);
-    } finally {
-      setLoading(false);
     }
-  };
 
-  const handleEmployeeSelect = (employee) => {
-    setSelectedEmployee(employee);
-  };
+    loadData()
+
+    return () => {
+      isMounted = false
+    }
+  }, [routes, processRoutes])
+
+  // Memoize handlers
+  const handleRouteSelect = useCallback((route) => {
+    setSelectedRoute(route)
+    setSelectedEmployee(route.employees[0])
+  }, [])
+
+  const handleEmployeeSelect = useCallback((employee) => {
+    setSelectedEmployee(employee)
+  }, [])
+
+  // Memoize the map center
+  const mapCenter = useMemo(() => [28.6139, 77.209], [])
 
   return (
     <div className="route-visualization">
       {loading && <LoadingOverlay />}
-      
+
+      {/* Map Container - Full screen background */}
+      <div className="map-container">
+        <MapContainer center={mapCenter} zoom={10} style={{ height: "100%", width: "100%" }}>
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          />
+          <ZoneLayer zones={zones} highCapacityZones={highCapacityZones} />
+          {selectedRoute && (
+            <MapComponent
+              key={`map-${selectedRoute.zone}-${selectedRoute.routeNumber}`}
+              route={selectedRoute}
+              facility={facilityCoordinates}
+              onEmployeeSelect={handleEmployeeSelect}
+            />
+          )}
+        </MapContainer>
+      </div>
+
+      {/* Sidebar - Floating on top of map */}
       <Sidebar
-        routes={routes}
+        routes={processedRoutes}
         selectedRoute={selectedRoute}
         onRouteSelect={handleRouteSelect}
-        selectedProfile={routeData}
+        selectedProfile={profile}
+        employeeData={employeeData}
+        zones={zones}
+        showGenerationControls={false}
       />
 
-      <div className="visualization-content">
-        <div className="map-container">
-          <MapContainer
-            center={[28.6139, 77.2090]}
-            zoom={10}
-            style={{ height: '100%', width: '100%' }}
-          >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            />
-            <ZoneLayer zones={zones} highCapacityZones={highCapacityZones} />
-            {selectedRoute && (
-              <MapComponent
-                route={selectedRoute}
-                facility={facility}
-                onEmployeeSelect={handleEmployeeSelect}
-              />
-            )}
-          </MapContainer>
-        </div>
-
+      {/* Route Details - Floating on top of map */}
+      {selectedRoute && selectedEmployee && (
         <div className="route-details">
-          {selectedRoute && (
-            <div className="route-section">
-              <h3>Route Details - {selectedRoute.zone}</h3>
-              {selectedRoute.employees.map((employee, index) => (
-                <RouteTracker
-                  key={`employee-${index}`}
-                  employee={employee}
-                  isSelected={selectedEmployee?.id === employee.id}
-                  onClick={() => handleEmployeeSelect(employee)}
-                />
-              ))}
-            </div>
-          )}
+          <div className="route-section">
+            <h3>Route Details - {selectedRoute.zone}</h3>
+            {selectedRoute.employees.map((employee, index) => (
+              <RouteTracker
+                key={`employee-${employee.id}-${index}`}
+                employee={employee}
+                isSelected={selectedEmployee?.id === employee.id}
+                onClick={() => handleEmployeeSelect(employee)}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
-  );
+  )
 }
 
-export default RouteVisualization;
+export default React.memo(RouteVisualization)
+

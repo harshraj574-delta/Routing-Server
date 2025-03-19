@@ -6,7 +6,7 @@ const RouteTracker = ({ employee }) => {
       <div>ID: {employee.id}</div>
       <div>Gender: {employee.gender}</div>
       <div>Address: {employee.address}</div>
-      <div>Shift Time: {employee.shiftTime || 'N/A'}</div>
+      <div>Shift: {employee.shift || 'N/A'}</div>
       <div>Pick-up Time: {employee.pickupTime || 'N/A'}</div>
       <div>Pick-up Order: {employee.order || 'N/A'}</div>
       <div>Zone: {employee.zone}</div>

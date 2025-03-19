@@ -1,25 +1,10 @@
 import Papa from 'papaparse';
+const API_BASE_URL = 'http://localhost:5001/api';
 
 export const employeeService = {
-  getEmployeeData: async () => {
-    try {
-      const response = await fetch('http://localhost:5001/api/employees', {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch employee data');
-      }
-      
-      const employees = await response.json();
-      console.log('Received employees:', employees.length);
-      return employees;
-    } catch (error) {
-      console.error('Error loading employee data:', error);
-      throw error;
-    }
+  getEmployeeData: async (shift) => {
+    const response = await fetch(`${API_BASE_URL}/employees${shift ? `?shift=${shift}` : ''}`);
+    if (!response.ok) throw new Error('Failed to fetch employee data');
+    return response.json();
   }
 };

@@ -43,10 +43,65 @@ export const profileService = {
   }
 };
 
+export const facilityService = {
+  getAll: async () => {
+    const response = await fetch(`${API_BASE_URL}/facilities`);
+    if (!response.ok) throw new Error('Failed to fetch facilities');
+    return response.json();
+  },
+
+  getById: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/facilities/${id}`);
+    if (!response.ok) throw new Error('Failed to fetch facility');
+    return response.json();
+  },
+
+  create: async (facilityData) => {
+    const response = await fetch(`${API_BASE_URL}/facilities`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(facilityData)
+    });
+    if (!response.ok) throw new Error('Failed to create facility');
+    return response.json();
+  },
+
+  update: async (id, facilityData) => {
+    const response = await fetch(`${API_BASE_URL}/facilities/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(facilityData)
+    });
+    if (!response.ok) throw new Error('Failed to update facility');
+    return response.json();
+  },
+
+  delete: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/facilities/${id}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Failed to delete facility');
+    return response.json();
+  }
+};
+
+export const employeeService = {
+  getEmployeeData: async (shift) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/employees?shift=${shift}`);
+      if (!response.ok) throw new Error('Failed to fetch employee data');
+      return response.json();
+    } catch (error) {
+      console.error('Error fetching employee data:', error);
+      throw error;
+    }
+  }
+};
+
 export const routeService = {
-  create: async ({ profileId, date, shift, routeData }) => {
-    if (!profileId || !date || !shift || !routeData) {
-      throw new Error('Missing required fields: profileId, date, shift, routeData');
+  create: async ({ profileId, date, shift, tripType, facilityId, routeData }) => {
+    if (!profileId || !date || !shift || !tripType || !facilityId || !routeData) {
+      throw new Error('Missing required fields: profileId, date, shift, tripType, facilityId, routeData');
     }
     
     // Validate that routeData has the required structure
@@ -59,10 +114,11 @@ export const routeService = {
         throw new Error(`Route at index ${index} must have zone and employees array properties`);
       }
     });
+
     const response = await fetch(`${API_BASE_URL}/routes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ profileId, date, shift, routeData })
+      body: JSON.stringify({ profileId, date, shift, tripType, facilityId, routeData })
     });
     if (!response.ok) throw new Error('Failed to create route');
     return response.json();

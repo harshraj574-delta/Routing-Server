@@ -1,5 +1,14 @@
+
+html, body {
+  margin: 0; /* Remove default margin */
+  padding: 0; /* Remove default padding */
+  height: 100%; /* Ensure full height */
+  overflow: hidden; /* Prevent scrolling */
+}
+
 .app {
   position: relative;
+  /* position: fixed; */
   width: 100vw;
   height: 100vh;
   overflow: hidden;
@@ -19,7 +28,8 @@
 }
 
 .route-visualization-page {
-  position: absolute;
+  /* position: absolute; */
+  position: relative;
   top: 0;
   left: 0;
   right: 0;
@@ -81,3 +91,4 @@
   width: 100%;
   height: 100%;
 }
+
