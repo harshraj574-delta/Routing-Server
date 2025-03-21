@@ -11,7 +11,8 @@ function Sidebar({
   routes = [],
   onRouteSelect,
   selectedRoute,
-  showGenerationControls = false
+  showGenerationControls = false,
+  onClose
 }) {
   const [routesWithDuration, setRoutesWithDuration] = useState([]);
   const facility = [28.402910, 76.998015];
@@ -121,6 +122,7 @@ function Sidebar({
     <div className="sidebar">
       <div className="sidebar-header">
         <h2>{showGenerationControls ? 'Route Generation' : 'Route Visualization'}</h2>
+        <button className="close-sidebar-button" onClick={onClose}>✖</button>
       </div>
 
       <div className="sidebar-content">

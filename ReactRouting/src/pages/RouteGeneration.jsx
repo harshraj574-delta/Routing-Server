@@ -17,6 +17,7 @@ function RouteGeneration() {
   const [routes, setRoutes] = useState([]);
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [facilities, setFacilities] = useState([]);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
@@ -49,6 +50,7 @@ function RouteGeneration() {
       highCapacityZones: profile.highCapacityZones || []
     };
     setSelectedProfile(completeProfile);
+    setIsSidebarOpen(true);
   };
 
   const handleGenerateRoutes = async ({ facilityId, shift, tripType }) => {
@@ -405,6 +407,10 @@ function RouteGeneration() {
     return inside;
   };
 
+  const closeSidebar = () => {
+    setIsSidebarOpen(false);
+  };
+
   return (
     <div className="route-generation-page">
       {isLoading && <LoadingOverlay />}
@@ -415,16 +421,19 @@ function RouteGeneration() {
           <ProfileList onProfileSelect={handleProfileSelect} />
           {selectedProfile && (
             <div className="generation-controls">
-              <Sidebar
-                employeeData={employeeData}
-                zones={zones}
-                onGenerateRoutes={handleGenerateRoutes}
-                selectedProfile={selectedProfile}
-                routes={routes}
-                onRouteSelect={handleRouteSelect}
-                selectedRoute={selectedRoute}
-                showGenerationControls={true}
-              />
+              {isSidebarOpen && (
+                <Sidebar
+                  employeeData={employeeData}
+                  zones={zones}
+                  onGenerateRoutes={handleGenerateRoutes}
+                  selectedProfile={selectedProfile}
+                  routes={routes}
+                  onRouteSelect={handleRouteSelect}
+                  selectedRoute={selectedRoute}
+                  showGenerationControls={true}
+                  onClose={closeSidebar}
+                />
+              )}
             </div>
           )}
         </div>

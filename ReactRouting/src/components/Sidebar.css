@@ -1,5 +1,5 @@
 .sidebar {
-  width: 150px;
+  width: 80px;
   height: 85vh;
   background: linear-gradient(135deg, #ffffff, #f5f7fa);
   border-right: 1px solid #ddd;
@@ -235,4 +235,37 @@
 
 .duration-warning {
   color: #dc3545;
+}
+
+.toggle-sidebar-button {
+  position: fixed;
+  left: 20px; /* Adjust position as needed */
+  top: 20px; /* Adjust position as needed */
+  z-index: 1001; /* Ensure it is above the sidebar */
+  padding: 10px 15px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.toggle-sidebar-button:hover {
+  background-color: #0056b3;
+}
+
+.close-sidebar-button {
+  background: none;
+  border: none;
+  color: #333;
+  font-size: 1.5rem;
+  cursor: pointer;
+  position: absolute; /* Position it in the header */
+  right: 10px; /* Adjust as needed */
+  top: 10px; /* Adjust as needed */
+}
+
+.close-sidebar-button:hover {
+  color: #dc3545; /* Change color on hover */
 }
