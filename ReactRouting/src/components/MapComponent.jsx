@@ -1,22 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { useMap, Marker, Polyline, Popup, GeoJSON } from 'react-leaflet';
+import { useMap, Polyline , GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 import './MapComponent.css';
-import { loadZoneData } from '../utils/dataLoader';
-import { calculateRouteDetails } from '../utils/routeCalculations';
-
-// Create custom icons
-const maleEmployeeIcon = L.divIcon({
-  className: 'employee-icon male',
-  iconSize: [24, 24],
-  iconAnchor: [8, 8]
-});
-
-const femaleEmployeeIcon = L.divIcon({
-  className: 'employee-icon female',
-  iconSize: [12, 12],
-  iconAnchor: [6, 6]
-});
 
 const createEmployeeIcon = (gender, order) => {
   const genderClass = gender && typeof gender === 'string' ? gender.toLowerCase() : 'unknown';
@@ -138,6 +123,7 @@ function MapComponent({ route, facility, onEmployeeSelect }) {
           const response = await fetch(`http://localhost:5000/route/v1/driving/${waypointsString}?overview=full&geometries=geojson`);
           if (!response.ok) throw new Error('Failed to fetch route');
           const data = await response.json();
+          console.log('Route data:', data);
           
           if (data.routes && data.routes[0]) {
             const routeLayer = L.geoJSON(data.routes[0].geometry, {

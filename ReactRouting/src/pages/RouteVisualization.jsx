@@ -12,9 +12,10 @@ import { calculateRouteDetails } from "../utils/routeCalculations"
 import ZoneLayer from "../components/ZoneLayer"
 import "leaflet/dist/leaflet.css"
 import "./RouteVisualization.css"
+import { routeService } from "../services/api"
 
 function RouteVisualization() {
-  const { profileId } = useParams()
+  const { id } = useParams()
   const location = useLocation()
   const { routes, profile, facility, shift, tripType, employeeData } = location.state || {}
 
@@ -130,6 +131,38 @@ function RouteVisualization() {
 
   // Memoize the map center
   const mapCenter = useMemo(() => [28.6139, 77.209], [])
+
+  useEffect(() => {
+    if (!routes) {
+      const fetchRouteData = async () => {
+        try {
+          setLoading(true)
+          console.log("Fetching route data for ID:", id)
+          
+          const routeData = await routeService.getById(id)
+          console.log("Fetched route data:", routeData)
+          
+          if (routeData) {
+            // Process the route data
+            const processed = await processRoutes(routeData)
+            setProcessedRoutes(processed)
+            
+            // Set initial selection
+            if (processed.length > 0) {
+              setSelectedRoute(processed[0])
+              setSelectedEmployee(processed[0].employees[0])
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch route data:', error)
+        } finally {
+          setLoading(false)
+        }
+      }
+      
+      fetchRouteData()
+    }
+  }, [id, routes, processRoutes])
 
   return (
     <div className="route-visualization">

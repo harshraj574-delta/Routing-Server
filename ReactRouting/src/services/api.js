@@ -99,29 +99,69 @@ export const employeeService = {
 };
 
 export const routeService = {
-  create: async ({ profileId, date, shift, tripType, facilityId, routeData }) => {
-    if (!profileId || !date || !shift || !tripType || !facilityId || !routeData) {
-      throw new Error('Missing required fields: profileId, date, shift, tripType, facilityId, routeData');
+  create: async (routeData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/routes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(routeData),
+      });
+      if (!response.ok) throw new Error('Failed to create route');
+      return response.json();
+    } catch (error) {
+      console.error('Error creating route:', error);
+      throw error;
     }
-    
-    // Validate that routeData has the required structure
-    if (!Array.isArray(routeData)) {
-      throw new Error('routeData must be an array');
-    }
-    
-    routeData.forEach((route, index) => {
-      if (!route.zone || !Array.isArray(route.employees)) {
-        throw new Error(`Route at index ${index} must have zone and employees array properties`);
-      }
-    });
+  },
 
-    const response = await fetch(`${API_BASE_URL}/routes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ profileId, date, shift, tripType, facilityId, routeData })
-    });
-    if (!response.ok) throw new Error('Failed to create route');
-    return response.json();
+  getAllRoutes: async () => {
+    try {
+      console.log('Making API request to:', `${API_BASE_URL}/routes/test`);
+      
+      // First, test if route routes are registered at all
+      try {
+        const testResponse = await fetch(`${API_BASE_URL}/routes/test`);
+        console.log('Test endpoint response:', await testResponse.text());
+      } catch (e) {
+        console.error('Test endpoint failed:', e);
+      }
+      
+      // Now try the actual routes endpoint
+      console.log('Making API request to:', `${API_BASE_URL}/routes`);
+      const response = await fetch(`${API_BASE_URL}/routes`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('API response status:', response.status);
+      
+      // If the main endpoint fails, try the direct route
+      if (!response.ok) {
+        console.log('Main endpoint failed, trying direct endpoint');
+        const directResponse = await fetch(`${API_BASE_URL}/directroutes`);
+        
+        if (directResponse.ok) {
+          const data = await directResponse.json();
+          console.log('Direct routes API response data:', data);
+          return data;
+        } else {
+          console.error('Direct endpoint also failed:', directResponse.status);
+          const errorText = await directResponse.text();
+          throw new Error(`Direct routes endpoint failed: ${directResponse.status} ${errorText}`);
+        }
+      }
+      
+      const data = await response.json();
+      console.log('API response data:', data);
+      return data;
+    } catch (error) {
+      console.error('Error fetching routes:', error);
+      throw error;
+    }
   },
 
   getByDateAndShift: async (date, shift) => {
@@ -131,9 +171,46 @@ export const routeService = {
   },
 
   getById: async (id) => {
-    const response = await fetch(`${API_BASE_URL}/routes/${id}`);
-    if (!response.ok) throw new Error('Failed to fetch route');
-    return response.json();
+    try {
+      console.log('Making API request to get route by ID:', id);
+      
+      const response = await fetch(`${API_BASE_URL}/routes/${id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('API response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API error response:', errorText);
+        throw new Error(`Failed to fetch route: ${response.status} ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('API response data:', data);
+      
+      // Parse JSON fields if needed
+      if (typeof data.routeData === 'string') {
+        data.routeData = JSON.parse(data.routeData);
+      }
+      if (typeof data.profile === 'string') {
+        data.profile = JSON.parse(data.profile);
+      }
+      if (typeof data.facility === 'string') {
+        data.facility = JSON.parse(data.facility);
+      }
+      if (typeof data.employeeData === 'string') {
+        data.employeeData = JSON.parse(data.employeeData);
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Error fetching route by ID:', error);
+      throw error;
+    }
   },
 
   getByProfile: async (profileId) => {

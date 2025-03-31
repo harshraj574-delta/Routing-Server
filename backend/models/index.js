@@ -1,17 +1,19 @@
-const { sequelize } = require('../config/database');
-const ProfileModel = require('./Profile');
-const RouteModel = require('./Route');
+const sequelize = require('../config/database');
+const { DataTypes } = require('sequelize');
+
+// Import models individually 
+const Profile = require('./Profile');
+const Route = require('./Route');
+// Import other models
 const EmployeeModel = require('./Employee');
 const FacilityModel = require('./Facility');
 
-const Profile = ProfileModel(sequelize);
-const Route = RouteModel(sequelize);
 const Employee = EmployeeModel(sequelize);
 const Facility = FacilityModel(sequelize);
 
-// Define associations with cascade delete
-Profile.hasMany(Route, { onDelete: 'CASCADE' });
-Route.belongsTo(Profile);
+// Set up associations after all models are defined
+Profile.hasMany(Route, { foreignKey: 'ProfileId' });
+Route.belongsTo(Profile, { foreignKey: 'ProfileId' });
 
 sequelize.sync({ force: false })
   .then(() => {
@@ -21,9 +23,12 @@ sequelize.sync({ force: false })
     console.error('Error syncing database:', err);
   });
 
+// Export all models together
 module.exports = {
+  sequelize,
   Profile,
   Route,
   Employee,
   Facility
+  // Include other models here
 };

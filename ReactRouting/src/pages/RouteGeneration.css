@@ -7,6 +7,10 @@
   margin: 0 auto;
 }
 
+.route-generation-page{
+  margin-top: 80px;
+}
+
 .profile-selection-section,
 .route-generation-section {
   background: #ffffff;

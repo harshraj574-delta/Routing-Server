@@ -141,12 +141,14 @@ function RouteGeneration() {
         return;
       }
 
-      const routeData = {
-        profileId: selectedProfile._id,
+      let routeData = {
         date: new Date().toISOString().split('T')[0],
         shift,
         tripType,
         facilityId: parseInt(facilityId),
+        facility: selectedFacility,
+        profile: selectedProfile,
+        employeeData: employees,
         routeData: []
       };
 
@@ -275,6 +277,19 @@ function RouteGeneration() {
         }
       }
 
+      // After all employees have been assigned to routes and before saving to the database
+      for (const route of routeData.routeData) {
+        // Add geometry data to each route
+        route.geometry = {
+          type: 'LineString',
+          coordinates: [
+            [selectedFacility.geoX, selectedFacility.geoY],
+            ...route.employees.map(emp => [emp.location.lng, emp.location.lat]),
+            [selectedFacility.geoX, selectedFacility.geoY]
+          ]
+        };
+      }
+
       console.log('Creating routes in database...', routeData);
       const generatedRoutes = await routeService.create(routeData);
       console.log('Routes created successfully:', generatedRoutes);
@@ -282,7 +297,7 @@ function RouteGeneration() {
       
       // Navigate to the route visualization page with all necessary data
       console.log('Navigating to route visualization page...');
-      navigate(`/routes/${selectedProfile.id}`, { 
+      navigate(`/routes/${generatedRoutes.uuid}`, { 
         state: { 
           routes: generatedRoutes,
           profile: selectedProfile,

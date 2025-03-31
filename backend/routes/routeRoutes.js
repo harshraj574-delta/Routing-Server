@@ -2,6 +2,14 @@ const express = require('express');
 const router = express.Router();
 const routeController = require('../controllers/routeController');
 
+// Debug route to check if this file is being loaded
+router.get('/test', (req, res) => {
+  res.json({ message: 'Route routes test endpoint working!' });
+});
+
+// Get all routes
+router.get('/', routeController.getAll);
+
 // Create new routes for a profile
 router.post('/', routeController.create);
 

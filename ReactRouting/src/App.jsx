@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react
 import ProfileManagement from './pages/ProfileManagement';
 import RouteGeneration from './pages/RouteGeneration';
 import RouteVisualization from './pages/RouteVisualization';
+import GeneratedRoutes from './pages/GeneratedRoutes';
 import './App.css';
 
 // Navigation component that only shows on certain routes
@@ -18,6 +19,7 @@ const Navigation = () => {
     <nav className="app-nav">
       <Link to="/">Profile Management</Link>
       <Link to="/generate">Generate Routes</Link>
+      <Link to="/generated-routes">View Generated Routes</Link>
     </nav>
   );
 };
@@ -31,7 +33,8 @@ function App() {
         <Routes>
           <Route path="/" element={<ProfileManagement />} />
           <Route path="/generate" element={<RouteGeneration />} />
-          <Route path="/routes/:profileId" element={<RouteVisualization />} />
+          <Route path="/routes/:id" element={<RouteVisualization />} />
+          <Route path="/generated-routes" element={<GeneratedRoutes />} />
         </Routes>
       </div>
     </Router>
