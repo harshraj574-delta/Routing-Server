@@ -66,6 +66,31 @@ const Route = sequelize.define('Route', {
   updatedAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
+  },
+  roadPolyline: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'Encoded road-following polyline from OSRM'
+  },
+  roadPathDetails: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    comment: 'Details about the road path such as distance and duration'
+  },
+  geometry: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    comment: 'Basic waypoints geometry'
+  },
+  roadGeometry: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    comment: 'Complete road-following route geometry'
+  },
+  routeDetails: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    comment: 'Additional route details like distance, duration'
   }
 }, {
   tableName: 'routes'

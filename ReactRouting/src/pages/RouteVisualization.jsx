@@ -26,6 +26,7 @@ function RouteVisualization() {
   const [zones, setZones] = useState([])
   const [highCapacityZones, setHighCapacityZones] = useState(new Set())
   const [selectedEmployee, setSelectedEmployee] = useState(null)
+  const [error, setError] = useState(null)
 
   // Memoize facility coordinates
   const facilityCoordinates = useMemo(
@@ -36,46 +37,76 @@ function RouteVisualization() {
   // Memoize route processing function
   const processRoutes = useCallback(
     async (routesData) => {
-      if (!routesData?.routeData) return []
+      if (!routesData?.routeData) {
+        console.log('No routeData found in routesData:', routesData);
+        return [];
+      }
+
+      console.log('Processing routes data:', JSON.stringify(routesData).slice(0, 500) + '...');
 
       // Create set of high capacity zones
       const highCapacityZoneSet = new Set(
         routesData.routeData.reduce((acc, route) => {
           if (route.vehicleCapacity > 4) {
-            acc.push(route.zone)
+            acc.push(route.zone);
           }
-          return acc
-        }, []),
-      )
-      setHighCapacityZones(highCapacityZoneSet)
+          return acc;
+        }, [])
+      );
+      setHighCapacityZones(highCapacityZoneSet);
 
-      // Process all routes
-      const processed = await Promise.all(
-        routesData.routeData.map(async (route) => {
-          const coordinates = [
-            ...route.employees.map((emp) => [emp.location.lat, emp.location.lng]),
-            facilityCoordinates,
-          ]
+      // Process all routes - use saved geometry when available
+      const processed = routesData.routeData.map((route, index) => {
+        console.log(`Processing route ${index}:`, route);
 
+        // Parse employee data if it's a string
+        let employees = route.employees || [];
+        if (typeof employees === 'string') {
           try {
-            const details = await calculateRouteDetails(coordinates, route.employees)
-            return {
-              ...route,
-              employees: details.employees,
-              totalDistance: details.totalDistance,
-              totalDuration: details.totalDuration,
-            }
-          } catch (error) {
-            console.error("Error calculating route details:", error)
-            return route
+            employees = JSON.parse(employees);
+            console.log(`Parsed employees for route ${index}, count:`, employees.length);
+          } catch (e) {
+            console.warn(`Failed to parse employees for route ${index}:`, e);
+            employees = [];
           }
-        }),
-      )
+        }
 
-      return processed
+        // Process road geometry if available
+        let geometry = route.roadGeometry || route.geometry;
+        
+        if (typeof geometry === 'string') {
+          try {
+            geometry = JSON.parse(geometry);
+          } catch (e) {
+            console.warn('Failed to parse geometry:', e);
+            geometry = null;
+          }
+        }
+        
+        // Keep track if we're using saved geometry
+        const usingSavedGeometry = !!(
+          geometry && 
+          geometry.coordinates && 
+          Array.isArray(geometry.coordinates) &&
+          geometry.coordinates.length > 0
+        );
+
+        console.log(`Route ${index} using saved geometry:`, usingSavedGeometry);
+        
+        // Return processed route with metadata
+        return {
+          ...route,
+          geometry,
+          usingSavedGeometry,
+          employees,
+          hasDetailedGeometry: !!route.roadGeometry
+        };
+      });
+
+      return processed;
     },
-    [facilityCoordinates],
-  )
+    []
+  );
 
   // Load initial data
   useEffect(() => {
@@ -105,6 +136,7 @@ function RouteVisualization() {
         }
       } catch (error) {
         console.error("Failed to load data:", error)
+        setError("Failed to load route visualization data: " + error.message)
       } finally {
         if (isMounted) {
           setLoading(false)
@@ -122,7 +154,9 @@ function RouteVisualization() {
   // Memoize handlers
   const handleRouteSelect = useCallback((route) => {
     setSelectedRoute(route)
-    setSelectedEmployee(route.employees[0])
+    if (route && route.employees && route.employees.length > 0) {
+      setSelectedEmployee(route.employees[0])
+    }
   }, [])
 
   const handleEmployeeSelect = useCallback((employee) => {
@@ -133,7 +167,7 @@ function RouteVisualization() {
   const mapCenter = useMemo(() => [28.6139, 77.209], [])
 
   useEffect(() => {
-    if (!routes) {
+    if (!routes && id) {
       const fetchRouteData = async () => {
         try {
           setLoading(true)
@@ -150,11 +184,14 @@ function RouteVisualization() {
             // Set initial selection
             if (processed.length > 0) {
               setSelectedRoute(processed[0])
-              setSelectedEmployee(processed[0].employees[0])
+              if (processed[0].employees && processed[0].employees.length > 0) {
+                setSelectedEmployee(processed[0].employees[0])
+              }
             }
           }
         } catch (error) {
           console.error('Failed to fetch route data:', error)
+          setError('Failed to fetch route data: ' + error.message)
         } finally {
           setLoading(false)
         }
@@ -167,6 +204,7 @@ function RouteVisualization() {
   return (
     <div className="route-visualization">
       {loading && <LoadingOverlay />}
+      {error && <div className="error-message">{error}</div>}
 
       {/* Map Container - Full screen background */}
       <div className="map-container">
@@ -178,10 +216,12 @@ function RouteVisualization() {
           <ZoneLayer zones={zones} highCapacityZones={highCapacityZones} />
           {selectedRoute && (
             <MapComponent
-              key={`map-${selectedRoute.zone}-${selectedRoute.routeNumber}`}
+              key={`map-${selectedRoute.zone || 'unknown'}-${selectedRoute.routeNumber || 'unknown'}`}
               route={selectedRoute}
               facility={facilityCoordinates}
               onEmployeeSelect={handleEmployeeSelect}
+              fromSaved={!!id}
+              tripType={selectedRoute.tripType || (routes ? routes.tripType : 'pickup')}
             />
           )}
         </MapContainer>
@@ -202,10 +242,10 @@ function RouteVisualization() {
       {selectedRoute && selectedEmployee && (
         <div className="route-details">
           <div className="route-section">
-            <h3>Route Details - {selectedRoute.zone}</h3>
-            {selectedRoute.employees.map((employee, index) => (
+            <h3>Route Details - {selectedRoute.zone || 'Unknown Zone'}</h3>
+            {selectedRoute.employees && selectedRoute.employees.map((employee, index) => (
               <RouteTracker
-                key={`employee-${employee.id}-${index}`}
+                key={`employee-${employee.id || index}-${index}`}
                 employee={employee}
                 isSelected={selectedEmployee?.id === employee.id}
                 onClick={() => handleEmployeeSelect(employee)}

@@ -172,40 +172,75 @@ export const routeService = {
 
   getById: async (id) => {
     try {
-      console.log('Making API request to get route by ID:', id);
-      
-      const response = await fetch(`${API_BASE_URL}/routes/${id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      console.log('API response status:', response.status);
-      
+      console.log(`Fetching route with ID: ${id}`);
+      const response = await fetch(`${API_BASE_URL}/routes/${id}`);
+
       if (!response.ok) {
+        console.error(`API error: ${response.status} ${response.statusText}`);
         const errorText = await response.text();
-        console.error('API error response:', errorText);
-        throw new Error(`Failed to fetch route: ${response.status} ${errorText}`);
+        throw new Error(`API error: ${response.status} - ${errorText}`);
       }
-      
+
       const data = await response.json();
-      console.log('API response data:', data);
-      
-      // Parse JSON fields if needed
-      if (typeof data.routeData === 'string') {
-        data.routeData = JSON.parse(data.routeData);
+      console.log('Raw route data fetched:', JSON.stringify(data).slice(0, 500) + '...');
+
+      // Process the data to ensure properly structured JSON
+      if (data) {
+        // Parse JSON fields if they are strings
+        if (typeof data.routeData === 'string') {
+          try {
+            data.routeData = JSON.parse(data.routeData);
+            console.log('Parsed routeData from string, count:', data.routeData.length);
+          } catch (e) {
+            console.warn('Failed to parse routeData JSON', e);
+            data.routeData = [];
+          }
+        }
+
+        // Ensure routeData is an array
+        if (!data.routeData) {
+          data.routeData = [];
+        } else if (!Array.isArray(data.routeData)) {
+          data.routeData = [data.routeData];
+        }
+
+        // Ensure each route in routeData has proper geometry
+        data.routeData = data.routeData.map((route, index) => {
+          // Parse geometry if it's a string
+          if (typeof route.geometry === 'string') {
+            try {
+              route.geometry = JSON.parse(route.geometry);
+              console.log(`Parsed geometry for route ${index}, coordinates:`, 
+                route.geometry.coordinates ? route.geometry.coordinates.length : 'none');
+            } catch (e) {
+              console.warn(`Failed to parse route geometry for route ${index}:`, e);
+              route.geometry = null;
+            }
+          }
+          
+          // Parse employee data if it's a string
+          if (typeof route.employees === 'string') {
+            try {
+              route.employees = JSON.parse(route.employees);
+              console.log(`Parsed employees for route ${index}, count:`, route.employees.length);
+            } catch (e) {
+              console.warn(`Failed to parse employee data for route ${index}:`, e);
+              route.employees = [];
+            }
+          }
+          
+          return route;
+        });
+        
+        console.log('Processed route data:', 
+          data.routeData.map(r => ({
+            id: r.id,
+            hasGeometry: !!r.geometry,
+            employeeCount: r.employees ? r.employees.length : 0
+          }))
+        );
       }
-      if (typeof data.profile === 'string') {
-        data.profile = JSON.parse(data.profile);
-      }
-      if (typeof data.facility === 'string') {
-        data.facility = JSON.parse(data.facility);
-      }
-      if (typeof data.employeeData === 'string') {
-        data.employeeData = JSON.parse(data.employeeData);
-      }
-      
+
       return data;
     } catch (error) {
       console.error('Error fetching route by ID:', error);

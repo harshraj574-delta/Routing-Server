@@ -65,6 +65,10 @@ function RouteGeneration() {
     try {
       console.log('Starting route generation with:', { facilityId, shift, tripType });
       
+      // Extract the shift time from the shift parameter
+      const shiftTime = shift.split('-')[0]; // This will give us the start time (e.g., "0900" from "0900-1700")
+      console.log('Using shift time for calculations:', shiftTime);
+
       // Load employees based on selected shift
       const employees = await employeeService.getEmployeeData(shift);
       if (!employees || employees.length === 0) {
@@ -279,15 +283,147 @@ function RouteGeneration() {
 
       // After all employees have been assigned to routes and before saving to the database
       for (const route of routeData.routeData) {
-        // Add geometry data to each route
+        // Create properly formatted coordinates based on trip type
+        const coordinates = [];
+        
+        // Always start at facility
+        coordinates.push([selectedFacility.geoX, selectedFacility.geoY]);
+        
+        // Store the sequence order in each employee object
+        route.employees.forEach((emp, idx) => {
+          emp.pickupOrder = idx + 1;
+        });
+        
+        // Add all employee locations in the correct order
+        // The order of employees in the array determines pickup order
+        route.employees.forEach((emp, idx) => {
+          if (emp.location && emp.location.lat && emp.location.lng) {
+            coordinates.push([emp.location.lng, emp.location.lat]);
+            console.log(`Added employee ${emp.name || 'Unnamed'} at position ${idx+1}`);
+          }
+        });
+        
+        // For pickup or round trips, end at facility
+        if (tripType.toLowerCase() === 'pickup' || 
+            tripType.toLowerCase() === 'round' || 
+            tripType.toLowerCase() === 'roundtrip') {
+          coordinates.push([selectedFacility.geoX, selectedFacility.geoY]);
+        }
+        
+        // Add geometry data to each route (this should be a GeoJSON LineString)
         route.geometry = {
           type: 'LineString',
-          coordinates: [
-            [selectedFacility.geoX, selectedFacility.geoY],
-            ...route.employees.map(emp => [emp.location.lng, emp.location.lat]),
-            [selectedFacility.geoX, selectedFacility.geoY]
-          ]
+          coordinates: coordinates
         };
+        
+        // Also store the trip type explicitly with the route
+        route.tripType = tripType;
+        
+        // Log to verify the geometry is properly structured
+        console.log(`Route ${route.routeNumber} geometry:`, 
+          route.geometry.coordinates.length + ' points, trip type: ' + tripType);
+        console.log('Employee pickup order:', 
+          route.employees.map(emp => 
+            `${emp.name || 'Unnamed'} (order: ${emp.pickupOrder})`
+          ).join(', ')
+        );
+      }
+
+      // First, check if OSRM is available
+      let osrmAvailable = false;
+      try {
+        const osrmResponse = await fetch('http://localhost:5000/health', { signal: AbortSignal.timeout(1000) });
+        osrmAvailable = osrmResponse.ok;
+      } catch (error) {
+        console.warn('OSRM service not available:', error.message);
+      }
+
+      // For each route, calculate and save the road-following polyline if OSRM is available
+      for (const route of routeData.routeData) {
+        try {
+          // Get employee waypoints in correct order
+          const waypoints = route.employees
+            .filter(emp => emp.location && emp.location.lat && emp.location.lng)
+            .map(emp => [emp.location.lat, emp.location.lng]);
+          
+          // Create OSRM waypoints string
+          // IMPORTANT: For OSRM, coordinates must be in [longitude,latitude] order
+          let osrmWaypoints = waypoints.map(point => `${point[1]},${point[0]}`); // [lng,lat] for OSRM
+          
+          // Add facility as the final destination for pickup/round trips
+          if (tripType.toLowerCase() === 'pickup' || 
+              tripType.toLowerCase() === 'round' || 
+              tripType.toLowerCase() === 'roundtrip') {
+            // IMPORTANT: facility is [geoX, geoY] which is already in [longitude,latitude] order
+            osrmWaypoints.push(`${selectedFacility.geoX},${selectedFacility.geoY}`);
+            console.log('Added facility as final destination:', 
+              `[${selectedFacility.geoX}, ${selectedFacility.geoY}]`);
+          }
+          
+          const waypointsString = osrmWaypoints.join(';');
+          console.log('OSRM waypoints string:', waypointsString);
+
+          try {
+            const response = await fetch(
+              `http://localhost:5000/route/v1/driving/${waypointsString}?overview=full&geometries=geojson&steps=true`
+            );
+            
+            if (!response.ok) {
+              throw new Error(`OSRM request failed: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.code === 'Ok' && data.routes && data.routes[0]) {
+              // Store the complete road geometry
+              route.roadGeometry = {
+                type: 'LineString',
+                coordinates: data.routes[0].geometry.coordinates // OSRM returns [lng,lat] coordinates
+              };
+              
+              // Store basic geometry as fallback
+              route.geometry = {
+                type: 'LineString',
+                coordinates: [
+                  ...waypoints.map(point => [point[1], point[0]]), // Convert to [lng,lat]
+                  [selectedFacility.geoX, selectedFacility.geoY] // Facility is already [lng,lat]
+                ]
+              };
+              
+              // Verify the last point matches the facility
+              const lastPoint = route.roadGeometry.coordinates[route.roadGeometry.coordinates.length - 1];
+              console.log('Last point in road geometry:', lastPoint);
+              console.log('Facility coordinates:', [selectedFacility.geoX, selectedFacility.geoY]);
+              
+              if (Math.abs(lastPoint[0] - selectedFacility.geoX) > 0.0001 || 
+                  Math.abs(lastPoint[1] - selectedFacility.geoY) > 0.0001) {
+                console.warn('Warning: Last point does not match facility coordinates');
+              }
+              
+              // Store route details
+              route.routeDetails = {
+                distance: data.routes[0].distance,
+                duration: data.routes[0].duration,
+                legs: data.routes[0].legs
+              };
+
+              // Calculate pickup times
+              calculatePickupTimes(route, shiftTime);
+            }
+          } catch (error) {
+            console.warn('Failed to calculate road geometry:', error);
+            // Set up fallback geometry
+            route.geometry = {
+              type: 'LineString',
+              coordinates: [
+                ...waypoints.map(point => [point[1], point[0]]), // Convert to [lng,lat]
+                [selectedFacility.geoX, selectedFacility.geoY] // Facility is already [lng,lat]
+              ]
+            };
+          }
+        } catch (error) {
+          console.error('Error processing route:', error);
+        }
       }
 
       console.log('Creating routes in database...', routeData);
@@ -424,6 +560,151 @@ function RouteGeneration() {
 
   const closeSidebar = () => {
     setIsSidebarOpen(false);
+  };
+
+  const calculatePickupTimes = (route, shiftTime) => {
+    if (!route || !route.employees || !shiftTime) {
+      console.warn('Missing required data for pickup time calculation:', { route, shiftTime });
+      return;
+    }
+
+    const EMPLOYEE_BUFFER_MINUTES = 3; // Buffer time for each employee pickup
+    const TRAFFIC_BUFFER_PERCENTAGE = 0.3; // 20% extra time for traffic
+
+    try {
+      // Parse shift time (facility arrival time)
+      let facilityArrivalTime;
+      shiftTime = String(shiftTime);
+      
+      if (shiftTime.match(/^\d{3,4}$/)) {
+        const timeString = shiftTime.padStart(4, '0');
+        const hours = parseInt(timeString.substring(0, 2), 10);
+        const minutes = parseInt(timeString.substring(2), 10);
+        
+        if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+          facilityArrivalTime = new Date();
+          facilityArrivalTime.setHours(hours);
+          facilityArrivalTime.setMinutes(minutes);
+          facilityArrivalTime.setSeconds(0);
+        } else {
+          throw new Error(`Invalid time values: hours=${hours}, minutes=${minutes}`);
+        }
+      } else {
+        throw new Error(`Unrecognized shift time format: ${shiftTime}`);
+      }
+
+      console.log('Target facility arrival time:', facilityArrivalTime.toLocaleTimeString());
+
+      // For pickup trips, calculate backwards from facility arrival time
+      if (route.tripType.toLowerCase() === 'pickup') {
+        // Sort employees by pickup order
+        const sortedEmployees = [...route.employees].sort((a, b) => a.pickupOrder - b.pickupOrder);
+        
+        // Get the OSRM route legs
+        const legs = route.routeDetails?.legs || [];
+        console.log('Original route legs:', legs.map(leg => Math.round(leg.duration / 60) + ' minutes'));
+
+        // Add traffic buffer to all leg durations
+        const legsWithBuffer = legs.map(leg => ({
+          ...leg,
+          duration: leg.duration * (1 + TRAFFIC_BUFFER_PERCENTAGE) // Add 20% for traffic
+        }));
+
+        console.log('Route legs with traffic buffer:', 
+          legsWithBuffer.map(leg => Math.round(leg.duration / 60) + ' minutes'));
+
+        // Start from facility arrival time and work backwards
+        let currentTime = new Date(facilityArrivalTime);
+        
+        // First, subtract the last leg duration (last employee to facility)
+        const lastLegDuration = legsWithBuffer[legsWithBuffer.length - 1]?.duration || 0;
+        currentTime = new Date(currentTime.getTime() - (lastLegDuration * 1000));
+        
+        // Process employees in reverse order (from last pickup to first)
+        for (let i = sortedEmployees.length - 1; i >= 0; i--) {
+          const employee = sortedEmployees[i];
+          
+          // Add employee buffer time (3 minutes per pickup)
+          currentTime = new Date(currentTime.getTime() - (EMPLOYEE_BUFFER_MINUTES * 60 * 1000));
+          
+          // Set pickup time for current employee
+          employee.pickupTime = currentTime.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          });
+
+          // If not the first employee, subtract the leg duration to the previous employee
+          if (i > 0) {
+            // Get the leg duration between this employee and the previous one
+            const legDuration = legsWithBuffer[i - 1]?.duration || 0;
+            currentTime = new Date(currentTime.getTime() - (legDuration * 1000));
+          }
+
+          console.log(`Employee ${employee.name || 'Unnamed'} (Order: ${employee.pickupOrder}):`, {
+            pickupTime: employee.pickupTime,
+            legDuration: `${Math.round(legsWithBuffer[i]?.duration / 60 || 0)} minutes`,
+            bufferTime: `${EMPLOYEE_BUFFER_MINUTES} minutes`
+          });
+        }
+
+        // Update the original employees array with calculated times
+        route.employees.forEach(emp => {
+          const sortedEmp = sortedEmployees.find(e => e.id === emp.id);
+          if (sortedEmp) {
+            emp.pickupTime = sortedEmp.pickupTime;
+          }
+        });
+
+        // Set facility arrival time
+        route.facilityArrivalTime = facilityArrivalTime.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+
+        // Calculate route start time
+        const routeStartTime = new Date(currentTime);
+
+        // Verification logs
+        console.log('Route timing details:');
+        console.log('Route start time:', routeStartTime.toLocaleTimeString());
+        console.log('Pickup sequence with buffers:');
+        sortedEmployees.forEach(emp => {
+          console.log(`${emp.name || 'Unnamed'} (Order: ${emp.pickupOrder}): ${emp.pickupTime}`);
+        });
+        console.log('Facility arrival (shift time):', route.facilityArrivalTime);
+        
+        // Calculate and log total route duration including buffers
+        const totalDuration = (facilityArrivalTime - routeStartTime) / 1000 / 60; // in minutes
+        console.log('Total route duration (including buffers):', Math.round(totalDuration), 'minutes');
+        
+        // Store buffer information in route details
+        route.bufferDetails = {
+          employeeBufferMinutes: EMPLOYEE_BUFFER_MINUTES,
+          trafficBufferPercentage: TRAFFIC_BUFFER_PERCENTAGE * 100,
+          totalBufferTime: Math.round(
+            (sortedEmployees.length * EMPLOYEE_BUFFER_MINUTES) + 
+            (route.routeDetails.duration * TRAFFIC_BUFFER_PERCENTAGE / 60)
+          )
+        };
+        
+        // Verify time gaps between pickups
+        for (let i = 0; i < sortedEmployees.length - 1; i++) {
+          const current = new Date(`2024-01-01 ${sortedEmployees[i].pickupTime}`);
+          const next = new Date(`2024-01-01 ${sortedEmployees[i + 1].pickupTime}`);
+          const gap = (next - current) / 1000 / 60; // gap in minutes
+          console.log(`Time gap between employee ${i + 1} and ${i + 2}: ${Math.round(gap)} minutes`);
+        }
+      }
+    } catch (error) {
+      console.error('Error in calculatePickupTimes:', error);
+      console.error('Problematic shift time:', shiftTime);
+      route.employees.forEach(employee => {
+        employee.pickupTime = 'N/A';
+      });
+      route.facilityArrivalTime = 'N/A';
+    }
   };
 
   return (
