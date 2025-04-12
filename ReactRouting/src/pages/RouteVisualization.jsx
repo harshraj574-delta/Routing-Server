@@ -13,6 +13,7 @@ import ZoneLayer from "../components/ZoneLayer"
 import "leaflet/dist/leaflet.css"
 import "./RouteVisualization.css"
 import { routeService } from "../services/api"
+import polyline from '@mapbox/polyline'; // Import polyline decoder
 
 function RouteVisualization() {
   const { id } = useParams()
@@ -55,7 +56,6 @@ function RouteVisualization() {
       );
       setHighCapacityZones(highCapacityZoneSet);
 
-      // Process all routes - use saved geometry when available
       const processed = routesData.routeData.map((route, index) => {
         console.log(`Processing route ${index}:`, route);
 
@@ -71,35 +71,24 @@ function RouteVisualization() {
           }
         }
 
-        // Process road geometry if available
-        let geometry = route.roadGeometry || route.geometry;
-        
-        if (typeof geometry === 'string') {
+        // Decode polyline
+        let decodedCoordinates = [];
+        if (route.encodedPolyline) {
           try {
-            geometry = JSON.parse(geometry);
+            decodedCoordinates = polyline.decode(route.encodedPolyline);
+            console.log(`Decoded polyline for route ${index}, points:`, decodedCoordinates.length);
           } catch (e) {
-            console.warn('Failed to parse geometry:', e);
-            geometry = null;
+            console.warn(`Failed to decode polyline for route ${index}:`, e);
+            decodedCoordinates = [];
           }
+        } else {
+          console.warn(`No encodedPolyline found for route ${index}`);
         }
-        
-        // Keep track if we're using saved geometry
-        const usingSavedGeometry = !!(
-          geometry && 
-          geometry.coordinates && 
-          Array.isArray(geometry.coordinates) &&
-          geometry.coordinates.length > 0
-        );
 
-        console.log(`Route ${index} using saved geometry:`, usingSavedGeometry);
-        
-        // Return processed route with metadata
         return {
           ...route,
-          geometry,
-          usingSavedGeometry,
+          decodedCoordinates, // Use decoded coordinates
           employees,
-          hasDetailedGeometry: !!route.roadGeometry
         };
       });
 
@@ -259,4 +248,3 @@ function RouteVisualization() {
 }
 
 export default React.memo(RouteVisualization)
-

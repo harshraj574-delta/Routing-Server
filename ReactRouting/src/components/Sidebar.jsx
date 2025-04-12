@@ -26,11 +26,23 @@ function Sidebar({
   useEffect(() => {
     const calculateDurations = async () => {
       const updatedRoutes = await Promise.all(routes.map(async (route) => {
-        // Get coordinates for the route including facility
+        if (!route.employees || !Array.isArray(route.employees)) {
+          console.warn('Route has no employees or invalid employees data');
+          return { ...route, duration: null, exceedsLimit: false };
+        }
+
+        // Get coordinates for the route including facility, filtering out employees with missing location data
         const routeCoordinates = [
-          ...route.employees.map(emp => [emp.location.lat, emp.location.lng]),
+          ...route.employees
+            .filter(emp => emp && emp.location && typeof emp.location.lat === 'number' && typeof emp.location.lng === 'number')
+            .map(emp => [emp.location.lat, emp.location.lng]),
           facility
         ];
+
+        if (routeCoordinates.length <= 1) { // Only facility coordinate present
+          console.warn('No valid employee coordinates found for route');
+          return { ...route, duration: null, exceedsLimit: false };
+        }
 
         try {
           const details = await calculateRouteDetails(routeCoordinates, route.employees);

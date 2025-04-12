@@ -177,6 +177,8 @@ function RouteGeneration() {
       // Process zones in batches
       if (selectedProfile.zoneClubbing) {
         console.log('Processing zones with clubbing enabled');
+        // Ensure we have shift time for pickup calculations
+        const shiftTime = shift.split('-')[0].replace(/[^0-9]/g, ''); // Extract numeric shift time
         const zonePairs = Object.entries(zonePairingMatrix);
         for (let i = 0; i < zonePairs.length; i++) {
           const [zone1, pairedZones] = zonePairs[i];
@@ -200,6 +202,12 @@ function RouteGeneration() {
             for (let j = 0; j < combinedEmployees.length; j += BATCH_SIZE) {
               const batch = combinedEmployees.slice(j, j + BATCH_SIZE);
               const routes = await processEmployeeBatch(batch, maxCapacity, facility, calculateDistance);
+              
+              // Calculate pickup times for each route
+              routes.forEach(route => {
+                calculatePickupTimes(route, shiftTime);
+              });
+              
               routeData.routeData.push(...routes.map(route => ({
                 ...route,
                 zone: `${zone1}-${zone2}`,
@@ -252,10 +260,8 @@ function RouteGeneration() {
       for (const route of routeData.routeData) {
         // Ensure routeData is structured correctly
         const routeCoordinates = route.employees.map(emp => [emp.location.lat, emp.location.lng]);
-        
-        // Add the facility coordinates to the routeCoordinates
-        const facilityCoordinates = [facility[0], facility[1]]; // Assuming facility is defined as [lat, lng]
-        const allCoordinates = [facilityCoordinates,...routeCoordinates];
+        const facilityCoordinates = [facility[0], facility[1]];
+        const allCoordinates = [...routeCoordinates, facilityCoordinates]; // Employee → Facility
 
         const durationDetails = await calculateRouteDetails(allCoordinates, route.employees);
         
@@ -365,7 +371,7 @@ function RouteGeneration() {
 
           try {
             const response = await fetch(
-              `http://localhost:5000/route/v1/driving/${waypointsString}?overview=full&geometries=geojson&steps=true`
+              `http://localhost:5000/route/v1/driving/${waypointsString}?overview=full&geometries=polyline&steps=true`
             );
             
             if (!response.ok) {
@@ -375,11 +381,8 @@ function RouteGeneration() {
             const data = await response.json();
             
             if (data.code === 'Ok' && data.routes && data.routes[0]) {
-              // Store the complete road geometry
-              route.roadGeometry = {
-                type: 'LineString',
-                coordinates: data.routes[0].geometry.coordinates // OSRM returns [lng,lat] coordinates
-              };
+              // Store the encoded polyline directly from OSRM response
+              route.encodedPolyline = data.routes[0].geometry;
               
               // Store basic geometry as fallback
               route.geometry = {

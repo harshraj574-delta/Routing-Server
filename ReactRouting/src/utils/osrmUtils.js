@@ -100,4 +100,39 @@ export const decodePolyline = (encoded) => {
   }
   
   return decoded;
-}; 
+};
+
+export const encodePolyline = (coordinates) => {
+  let output = '';
+  let prevLat = 0;
+  let prevLng = 0;
+
+  for (const [lat, lng] of coordinates) {
+    // Convert to integer representation
+    const latInt = Math.round(lat * 1e5);
+    const lngInt = Math.round(lng * 1e5);
+
+    // Encode latitude difference
+    const dLat = latInt - prevLat;
+    prevLat = latInt;
+    output += encodeNumber(dLat);
+
+    // Encode longitude difference
+    const dLng = lngInt - prevLng;
+    prevLng = lngInt;
+    output += encodeNumber(dLng);
+  }
+
+  return output;
+};
+
+const encodeNumber = (num) => {
+  num = num < 0 ? ~(num << 1) : (num << 1);
+  let output = '';
+  while (num >= 0x20) {
+    output += String.fromCharCode((0x20 | (num & 0x1f)) + 63);
+    num >>= 5;
+  }
+  output += String.fromCharCode(num + 63);
+  return output;
+};
