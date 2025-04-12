@@ -39,10 +39,7 @@ const Route = sequelize.define('Route', {
     type: DataTypes.JSON,
     allowNull: true
   },
-  routeData: {
-    type: DataTypes.JSON,
-    allowNull: true
-  },
+  // routeData column removed as geometry is now stored in RoutingGeometry table
   totalEmployees: {
     type: DataTypes.INTEGER,
     defaultValue: 0
@@ -67,30 +64,20 @@ const Route = sequelize.define('Route', {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
   },
-  roadPolyline: {
+  consolidatedPolyline: {
     type: DataTypes.TEXT,
     allowNull: true,
-    comment: 'Encoded road-following polyline from OSRM'
+    comment: 'Consolidated encoded polyline for the entire route'
   },
-  roadPathDetails: {
+  routeLegsData: {
     type: DataTypes.JSON,
     allowNull: true,
-    comment: 'Details about the road path such as distance and duration'
-  },
-  geometry: {
-    type: DataTypes.JSON,
-    allowNull: true,
-    comment: 'Basic waypoints geometry'
-  },
-  roadGeometry: {
-    type: DataTypes.JSON,
-    allowNull: true,
-    comment: 'Complete road-following route geometry'
+    comment: 'Consolidated route legs data including individual polylines and details'
   },
   routeDetails: {
     type: DataTypes.JSON,
     allowNull: true,
-    comment: 'Additional route details like distance, duration'
+    comment: 'Additional route details like total distance, duration, and waypoints'
   }
 }, {
   tableName: 'routes'
