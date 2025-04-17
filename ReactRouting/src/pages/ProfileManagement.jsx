@@ -59,7 +59,11 @@ function ProfileManagement() {
       {error && <div className="error-message">{error}</div>}
       
       <div className="profile-management-content">
-        <h1>Profile Management</h1>
+      <h1 className="mb-4 text-4xl font-extrabold leading-none tracking-tight text-black md:text-5xl lg:text-6xl dark:text-grey-100">
+  Manage your routes with <span className="text-blue-600 dark:text-blue-500">Profile Management</span>
+</h1>
+
+
         <button 
           className="create-profile-btn" 
           onClick={() => setShowProfileModal(true)}

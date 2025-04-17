@@ -9,7 +9,7 @@ import './MapComponent.css';
 
 // Define marker icons (or import them)
 const facilityIcon = new L.Icon({
-    iconUrl: './assets/facility-icon.png', // Replace with your facility icon path
+    iconUrl: '/facility-icon.png', // Using relative path from public directory
     iconSize: [35, 35],
     iconAnchor: [17, 35],
     popupAnchor: [0, -35]

@@ -43,7 +43,7 @@ function RouteVisualization() {
         return [];
       }
 
-      console.log('Processing routes data:', JSON.stringify(routesData).slice(0, 500) + '...');
+      console.log('Processing routes data:', JSON.stringify(routesData).slice(0, 10000) + '...');
 
       // Create set of high capacity zones
       const highCapacityZoneSet = new Set(
@@ -143,6 +143,7 @@ function RouteVisualization() {
   // Memoize handlers
   const handleRouteSelect = useCallback((route) => {
     setSelectedRoute(route)
+    console.log("Selected route:", route);
     if (route && route.employees && route.employees.length > 0) {
       setSelectedEmployee(route.employees[0])
     }
@@ -167,7 +168,8 @@ function RouteVisualization() {
           
           if (routeData) {
             // Process the route data
-            const processed = await processRoutes(routeData)
+            const processed = await processRoutes(routeData);
+            console.log("Processed route data:", processed);
             setProcessedRoutes(processed)
             
             // Set initial selection

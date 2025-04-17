@@ -90,13 +90,18 @@ export const employeeService = {
     try {
       const response = await fetch(`${API_BASE_URL}/employees?shift=${shift}`);
       if (!response.ok) throw new Error('Failed to fetch employee data');
-      return response.json();
+
+      const data = await response.json(); // Parse once
+      console.log("This is employee data:", JSON.stringify(data, null, 2)); // Log readable JSON
+
+      return data; // Return already parsed data
     } catch (error) {
       console.error('Error fetching employee data:', error);
       throw error;
     }
   }
 };
+
 
 export const routeService = {
   create: async (routeData) => {
