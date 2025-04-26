@@ -24,6 +24,7 @@ const employeeRoutes = require('./routes/employeeRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const routeRoutes = require('./routes/routeRoutes');
 const facilityRoutes = require('./routes/facilityRoutes');
+const routeGenerationRoutes = require('./routes/routeGenerationRoutes');
 
 // Add this right before you define your routes
 console.log('----- Available route files -----');
@@ -31,12 +32,14 @@ console.log('employeeRoutes exists:', !!employeeRoutes);
 console.log('profileRoutes exists:', !!profileRoutes);
 console.log('routeRoutes exists:', !!routeRoutes);
 console.log('facilityRoutes exists:', !!facilityRoutes);
+console.log('routeGenerationRoutes exists:', !!routeGenerationRoutes);
 
 // Define routes with explicit paths
 app.use('/api/employees', employeeRoutes);
 app.use('/api/profiles', profileRoutes);
 app.use('/api/routes', routeRoutes);
 app.use('/api/facilities', facilityRoutes);
+app.use('/api/route-generation', routeGenerationRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -129,7 +132,7 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 5001;
 
 // Test database connection and sync models before starting server
-sequelize.sync({ alter: true })
+sequelize.sync({ alter: false })
   .then(() => {
     console.log('Database synced');
     app.listen(PORT, () => {
